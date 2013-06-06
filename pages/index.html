@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreadful Bulldozer Root</title>
+    <link type="text/css" rel="stylesheet"
+          href="/bootstrap/css/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet"
+          href="/bootstrap/css/bootstrap-responsive.min.css">
+  </head>
+  <body class="components">
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <a class="brand" href="#">Dreadful Bulldozer</a>
+        <ul class="nav">
+          <li class="active"><a href="#">Home</a></li>
+        </ul>
+      </div>
+    </nav>
+    <section>
+      <div class="hero-unit">
+      <form action="/create" method="post">
+        <button class="btn btn-primary" type="submit" style="width: 70px;">Create</button> a new notepage.
+      </form>
+      <form action="/list" method="get">
+        <button class="btn btn-info" type="submit" style="width: 70px;">List</button> pages owned or edited by you.
+      </form>
+      </div>
+    </section>
+    <script src="/jquery/jquery.min.js"></script>
+    <script src="/bootstrap/bootstrap.min.js"></script>
+  </body>
+</html>
+

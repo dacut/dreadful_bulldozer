@@ -1,0 +1,91 @@
+<%!
+import cherrypy
+import dozer.dao as dao
+from pprint import pformat
+
+COLUMNS = 4
+%>
+<%
+document_path_elements = document.full_name.split("/")
+%>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>${document.full_name | h} - Dreadful Bulldozer</title>
+    <link type="text/css" rel="stylesheet"
+          href="/bootstrap/css/bootstrap.min.css" />
+    <script type="text/javascript"><!--
+% if document.document_type == "notepage":
+dz_document = ${dao.JSONObjectEncoder().encode(document)};
+% endif
+--></script>
+  </head>
+  <body class="components">
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <a class="brand" href="#">Dreadful Bulldozer</a>
+        <ul class="nav">
+          <li><a href="/">Home</a></li>
+        </ul>
+      </div>
+    </nav>
+    <section>
+      <div class="container-fluid">
+        <ul class="breadcrumb">
+% for i, doc in enumerate(document_path_elements):
+          <li><a href="/notepage/${"/".join(document_path_elements[:i+1]) | h}">\
+${doc.document_name if i > 0 else "root"|h}</a>\
+%     if i < len(document_path_elements) - 1:
+ <span class="divider">/</span>\
+%     endif
+</li>
+% endfor
+        </ul>
+        <div class="row-fluid clearfix">
+          <div class="span2">
+            <div class="well">
+% if document.document_type == "notepage":
+<%include file="/sidebar_notepage.html" />\
+% elif document.document_type == "folder":
+<%include file="/sidebar_folder.html" />\
+% endif
+            </div>
+          </div>
+          <div class="span10">
+% if document.document_type == "folder":
+            <div class="well">
+<%
+children = document.children
+children.sort(key=lambda child: (child.document_type, child.document_name))
+%>
+              <table width="100%">
+                <tbody>
+%     for i, child in enumerate(children):
+%         if i == 0:
+                  <tr>
+%         elif i % COLUMNS == 0:
+</tr>
+                  <tr>
+%         endif
+                    <td>\
+<a href="/notepage${child.full_name | h}">${child.document_name | h}\
+${"/" if child.document_type == "folder" else ""}</a></td>
+%     endfor
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+% else:
+% endif
+          </div>
+        </div>
+      </div>
+    </section>
+    <script src="/jquery/jquery.min.js"></script>
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+% if document.document_type == "notepage":
+    <script src="/static/notepage.js"></script>
+% endif
+  </body>
+</html>
+

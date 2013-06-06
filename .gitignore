@@ -1,0 +1,6 @@
+*~
+*.pyc
+bootstrap
+cherrypy
+jquery
+sqlalchemy
