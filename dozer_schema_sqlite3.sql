@@ -1,186 +1,200 @@
 BEGIN;
 
-CREATE TABLE dz_entity_domains(
-    entity_domain TEXT NOT NULL,
-    display_name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    CONSTRAINT pk_dz_ent_dom PRIMARY KEY (entity_domain));
+-- Domain tables -------------------------------------------------------------
+CREATE TABLE dz_user_domains(
+    user_domain_id NUMBER(10) PRIMARY KEY NOT NULL, -- AUTOINCREMENT
+    display_name VARCHAR(32) NOT NULL,
+    description VARCHAR(32) NOT NULL,
+    domain_config TEXT);
 
-INSERT INTO dz_entity_domains(entity_domain, display_name, description)
-VALUES('dozer_user', 'Local Dozer user', 'Local Dozer user');
+INSERT INTO dz_user_domains(user_domain_id, display_name, description)
+VALUES(0, 'local', 'Locally defined users and groups');
 
-INSERT INTO dz_entity_domains(entity_domain, display_name, description)
-VALUES('dozer_group', 'Local Dozer group', 'Local Dozer group');
+CREATE TABLE dz_node_types(
+    node_type_id NUMBER(10) PRIMARY KEY NOT NULL, -- AUTOINCREMENT
+    node_type_name VARCHAR(32) NOT NULL);
 
-INSERT INTO dz_entity_domains(entity_domain, display_name, description)
-VALUES('auth_users', 'All authenticated users', 'All authenticated users');
+INSERT INTO dz_node_types(node_type_id, node_type_name)
+VALUES(0, 'folder');
 
-INSERT INTO dz_entity_domains(entity_domain, display_name, description)
-VALUES('users', 'All users', 'All users');
+INSERT INTO dz_node_types(node_type_id, node_type_name)
+VALUES(1, 'notepage');
 
-INSERT INTO dz_entity_domains(entity_domain, display_name, description)
-VALUES('system', 'System', 'System');
+INSERT INTO dz_node_types(node_type_id, node_type_name)
+VALUES(2, 'note');
 
-CREATE TABLE dz_documents(
-    document_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    parent_document_id INTEGER,
-    document_type TEXT NOT NULL,
-    document_name TEXT NOT NULL,
-    owner_entity_domain TEXT NOT NULL,
-    owner_entity_id TEXT,
-    inherit_permissions TEXT,
-    CONSTRAINT uk_dz_docs_name UNIQUE (document_name),
-    CONSTRAINT fk_dz_docs_parent FOREIGN KEY (parent_document_id)
-    REFERENCES dz_documents(document_id),
-    CONSTRAINT fk_dz_docs_owner FOREIGN KEY (owner_entity_domain)
-    REFERENCES dz_entity_domains(entity_domain),
-    CONSTRAINT ck_dz_docs_type CHECK (document_type IN ('folder', 'notepage')),
-    CONSTRAINT ck_dz_docs_inherit CHECK (inherit_permissions IN ('Y', 'N')));
-CREATE INDEX i_dz_doc_name
-ON dz_documents(document_name);
+-- Users and groups ----------------------------------------------------------
+CREATE TABLE dz_users(
+    user_id NUMBER(20) PRIMARY KEY NOT NULL, -- AUTOINCREMENT
+    user_domain_id NUMBER(10) NOT NULL,
+    user_name VARCHAR(256),
+    display_name VARCHAR(256),
+    password_pbkdf2 CHAR(48),
+    is_group CHAR(1) NOT NULL,
+    UNIQUE (user_domain_id, user_name),
+    FOREIGN KEY (user_domain_id) REFERENCES dz_user_domains(user_domain_id),
+    CHECK (is_group IN ('Y', 'N')));
 
-CREATE INDEX i_dz_doc_parent_id
-ON dz_documents(parent_document_id, document_name);
-
-INSERT INTO dz_documents(
-    document_id, document_name, parent_document_id, owner_entity_domain,
-    owner_entity_id, document_type, inherit_permissions)
-VALUES(1, '', null, 'system', 'system', 'folder', 'N');
-
-INSERT INTO dz_documents(
-    document_id, document_name, parent_document_id, owner_entity_domain,
-    owner_entity_id, document_type, inherit_permissions)
-VALUES(2, 'tmp', 1, 'system', 'system', 'folder', 'N');
-
-CREATE TABLE dz_document_permissions(
-    document_id INTEGER NOT NULL,
-    list_index INTEGER NOT NULL,
-    entity_domain TEXT NOT NULL,
-    entity_id TEXT,
-    permissions TEXT,
-    CONSTRAINT pk_dz_doc_perms PRIMARY KEY (document_id, list_index),
-    CONSTRAINT uk_dz_doc_perms_docinfo UNIQUE (
-        document_id, entity_domain, entity_id),
-    CONSTRAINT fk_dz_doc_perm_docid FOREIGN KEY (document_id)
-    REFERENCES dz_documents(document_id),
-    CONSTRAINT fk_dz_doc_perm_dom FOREIGN KEY (entity_domain)
-    REFERENCES dz_entity_domains(entity_domain));
-
-INSERT INTO dz_document_permissions(document_id, list_index, entity_domain,
-       entity_id, permissions)
-VALUES(1, 0, 'users', null, 'LNS');
-
-INSERT INTO dz_document_permissions(document_id, list_index, entity_domain,
-       entity_id, permissions)
-VALUES(2, 0, 'users', null, 'N');
-
-CREATE TABLE dz_sessions(
-    session_id INTEGER PRIMARY KEY,
-    user_entity_domain TEXT NOT NULL,
-    user_entity_id TEXT NOT NULL,
-    established_time_utc INTEGER NOT NULL,
-    last_ping_time_utc INTEGER NOT NULL,
-    CONSTRAINT fk_ses_ent_dom FOREIGN KEY (user_entity_domain)
-    REFERENCES dz_entity_domains(entity_domain));
-
-CREATE INDEX i_dz_sess_time
-ON dz_sessions(
-    last_ping_time_utc ASC);
-
-CREATE TABLE dz_document_revisions(
-    document_id INTEGER NOT NULL,
-    revision_id INTEGER NOT NULL,
-    delta_to_previous TEXT,
-    editor_entity_domain TEXT NOT NULL,
-    editor_entity_id TEXT NOT NULL,
-    edit_time_utc INTEGER NOT NULL,
-    CONSTRAINT pk_dz_doc_rev PRIMARY KEY (document_id, revision_id));
-
-CREATE TABLE dz_session_documents(
-    session_id INTEGER NOT NULL,
-    document_id INTEGER NOT NULL,
-    revision_id INTEGER NOT NULL,
-    CONSTRAINT pk_dz_ses_doc PRIMARY KEY (session_id, document_id),
-    CONSTRAINT fk_dz_ses_doc_ses_id FOREIGN KEY (session_id)
-    REFERENCES dz_sessions(session_id),
-    CONSTRAINT fk_dz_ses_doc_doc_rev FOREIGN KEY (document_id, revision_id)
-    REFERENCES dz_document_revisions(document_id, revision_id));
-
-CREATE TABLE dz_document_display_prefs(
-    document_id INTEGER NOT NULL,
-    width_pixels INTEGER,
-    height_pixels INTEGER,
-    background_color TEXT,
-    font_family TEXT,
-    font_size_millipt INTEGER,
-    font_weight TEXT,
-    font_slant TEXT,
-    font_color TEXT,
-    CONSTRAINT pk_dz_doc_disp_prefs PRIMARY KEY (document_id),
-    CONSTRAINT fk_dz_doc_disp_prefs_doc_id FOREIGN KEY (document_id)
-    REFERENCES dz_documents(document_id));
-
-CREATE TABLE dz_document_hashtag_prefs(
-    document_id INTEGER NOT NULL,
-    list_index INTEGER NOT NULL,
-    hashtag TEXT NOT NULL,
-    background_color TEXT,
-    font_family TEXT,
-    font_size_millipt INTEGER,
-    font_weight TEXT,
-    font_slant TEXT,
-    font_color TEXT,
-    CONSTRAINT pk_dz_doc_ht_prefs PRIMARY KEY (document_id, list_index),
-    CONSTRAINT uk_dz_doc_ht_prefs UNIQUE (document_id, hashtag),
-    CONSTRAINT fk_dz_doc_ht_prefs_doc_id FOREIGN KEY (document_id)
-    REFERENCES dz_documents(document_id));
-
-CREATE TABLE dz_notes(
-    note_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    document_id INTEGER NOT NULL,
-    contents_markdown TEXT,
-    x_pos_pixels INTEGER,
-    y_pos_pixels INTEGER,
-    width_pixels INTEGER,
-    height_pixels INTEGER,
-    background_color TEXT,
-    font_family TEXT,
-    font_size_millipt INTEGER,
-    font_weight TEXT,
-    font_slant TEXT,
-    font_color TEXT,
-    CONSTRAINT fk_dz_notes_doc_id FOREIGN KEY (document_id)
-    REFERENCES dz_documents(document_id));
-
-CREATE INDEX i_dz_note_doc_id
-ON dz_notes(document_id);
-
-
-CREATE TABLE dz_note_hashtags(
-    note_id INTEGER NOT NULL,
-    hashtag TEXT NOT NULL,
-    CONSTRAINT pk_dz_note_ht PRIMARY KEY (note_id, hashtag),
-    CONSTRAINT fk_dz_note_ht_note_id FOREIGN KEY (note_id)
-    REFERENCES dz_notes(note_id));
-
-CREATE TABLE dz_local_users(
-    username TEXT PRIMARY KEY,
-    password_pbkdf2 TEXT NOT NULL);
-
-CREATE TABLE dz_local_groups(
-    groupname TEXT PRIMARY KEY);
+CREATE INDEX i_dz_usr_domname
+ON dz_users(user_domain_id, user_name);
 
 CREATE TABLE dz_local_group_members(
-    groupname TEXT NOT NULL,
-    username TEXT NOT NULL,
-    CONSTRAINT pk_dz_loc_grp_mem PRIMARY KEY (groupname, username),
-    CONSTRAINT fk_dz_loc_grp_mem_grp FOREIGN KEY (groupname)
-    REFERENCES dz_local_groups(groupname),
-    CONSTRAINT fk_dz_loc_grp_mem_user FOREIGN KEY (username)
-    REFERENCES dz_local_users(username));
+    group_id NUMBER(20) NOT NULL, -- AUTOINCREMENT
+    user_id NUMBER(20) NOT NULL,
+    administrator CHAR(1) NOT NULL,
+    PRIMARY KEY (group_id, user_id),
+    FOREIGN KEY (group_id) REFERENCES dz_users(user_id),
+    FOREIGN KEY (user_id) REFERENCES dz_users(user_id),
+    CHECK (administrator IN ('Y', 'N')));
+CREATE INDEX i_dz_lgm_user_group
+ON dz_local_group_members(user_id, group_id);
 
-CREATE INDEX i_dz_loc_grp_mem_user
-ON dz_local_group_members(username, groupname);
+-- Create the system user
+INSERT INTO dz_users(user_id, user_domain_id, user_name, display_name,
+                     password_pbkdf2, is_group)
+VALUES(0, 0, 'system', 'System', NULL, 'N');
+
+-- Create the all_users catch-all group
+INSERT INTO dz_users(user_id, user_domain_id, user_name, display_name,
+                     password_pbkdf2, is_group)
+VALUES(1, 0, 'all_users', 'All users', NULL, 'Y');
+
+INSERT INTO dz_local_group_members(group_id, user_id, administrator)
+VALUES(1, 0, 'Y');
+
+-- Nodes ---------------------------------------------------------------------
+CREATE TABLE dz_nodes(
+    node_id NUMBER(20) PRIMARY KEY NOT NULL, -- AUTOINCREMENT
+    node_type_id NUMBER(10) NOT NULL,
+    parent_node_id NUMBER(20),
+    node_name VARCHAR(64) NOT NULL,
+    FOREIGN KEY (node_type_id) REFERENCES dz_node_types(node_type_id),
+    FOREIGN KEY (parent_node_id) REFERENCES dz_nodes(node_id),
+    UNIQUE (parent_node_id, node_name));
+    
+CREATE INDEX i_dz_node_parent_id
+ON dz_nodes(parent_node_id, node_name);
+
+CREATE TABLE dz_node_permissions(
+    node_id NUMBER(20) NOT NULL,
+    user_id NUMBER(20) NOT NULL,
+    permissions VARCHAR(32) NOT NULL,
+    PRIMARY KEY (node_id, user_id),
+    FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id),
+    FOREIGN KEY (user_id) REFERENCES dz_users(user_id));
+
+CREATE INDEX i_dz_nperm_userid
+ON dz_node_permissions(user_id, node_id);
+
+CREATE TABLE dz_note_display_prefs(
+    node_id NUMBER(20) NOT NULL,
+    hashtag VARCHAR(256),
+    width_um NUMBER(20),
+    height_um NUMBER(20),
+    background_color VARCHAR(32),
+    font_family VARCHAR(256),
+    font_size_millipt NUMBER(10),
+    font_weight VARCHAR(32),
+    font_slant VARCHAR(32),
+    font_color VARCHAR(32),
+    PRIMARY KEY (node_id, hashtag),
+    FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id));
+
+-- Folders -------------------------------------------------------------------
+CREATE TABLE dz_folders(
+    node_id NUMBER(20) PRIMARY KEY NOT NULL,
+    owner_user_id NUMBER(20) NOT NULL,
+    inherit_permissions CHAR(1) NOT NULL,
+    FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id),
+    FOREIGN KEY (owner_user_id) REFERENCES dz_users(user_id),
+    CHECK (inherit_permissions IN ('Y', 'N')));
+
+-- Create the root folder.
+INSERT INTO dz_nodes(node_id, node_type_id, parent_node_id, node_name)
+VALUES(0, 0, NULL, '');
+
+INSERT INTO dz_folders(node_id, owner_user_id, inherit_permissions)
+VALUES(0, 0, 'N');
+
+INSERT INTO dz_node_permissions(node_id, user_id, permissions)
+VALUES(0, 0, 'ACDELNRS');
+
+INSERT INTO dz_node_permissions(node_id, user_id, permissions)
+VALUES(0, 1, 'LNRS');
+
+-- Notepages -----------------------------------------------------------------
+CREATE TABLE dz_notepages(
+    node_id NUMBER(20) PRIMARY KEY NOT NULL,
+    owner_user_id NUMBER(20) NOT NULL,
+    current_revision_id_sha256 CHAR(64),
+    snap_to_grid CHAR(1),
+    grid_x_um NUMBER(10),
+    grid_y_um NUMBER(10),
+    grid_x_subdivisions NUMBER(10),
+    grid_y_subdivisions NUMBER(10),
+    FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id),
+    FOREIGN KEY (owner_user_id) REFERENCES dz_users(user_id),
+    CHECK (snap_to_grid IS NULL OR snap_to_grid IN ('Y', 'N')),
+    CHECK (grid_x_um IS NULL OR grid_x_um > 0),
+    CHECK (grid_y_um IS NULL OR grid_y_um > 0),
+    CHECK (grid_x_subdivisions IS NULL OR grid_x_subdivisions >= 1),
+    CHECK (grid_y_subdivisions IS NULL OR grid_y_subdivisions >= 1));
+
+CREATE TABLE dz_notepage_guides(
+    node_id NUMBER(20) PRIMARY KEY NOT NULL,
+    orientation CHAR(1) NOT NULL,
+    position_um NUMBER(20) NOT NULL,
+    FOREIGN KEY (node_id) REFERENCES dz_notepages(node_id),
+    CHECK (orientation IN ('H', 'V')));
+
+CREATE TABLE dz_notepage_revisions(
+    node_id NUMBER(20) NOT NULL,
+    revision_id_sha256 CHAR(64) NOT NULL,
+    previous_revision_id_sha256 CHAR(64),
+    delta_to_previous TEXT,
+    editor_user_id NUMBER(20) NOT NULL,
+    edit_time_utc TIMESTAMP(3),
+    PRIMARY KEY (node_id, revision_id_sha256),
+    UNIQUE (node_id, previous_revision_id_sha256),
+    FOREIGN KEY (node_id) REFERENCES dz_notepages(node_id),
+    FOREIGN KEY (previous_revision_id_sha256)
+      REFERENCES dz_notepage_revisions(revision_id_sha256));
+
+CREATE INDEX dz_nprev_prev
+ON dz_notepage_revisions(node_id, previous_revision_id_sha256);
+
+-- Notes ---------------------------------------------------------------------
+CREATE TABLE dz_notes(
+    node_id NUMBER(20) PRIMARY KEY NOT NULL,
+    on_top_of_node_id NUMBER(20),
+    contents_markdown TEXT,
+    contents_hash_sha256 CHAR(64),
+    x_pos_um NUMBER(20) NOT NULL,
+    y_pos_um NUMBER(20) NOT NULL,
+    FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id),
+    FOREIGN KEY (on_top_of_node_id) REFERENCES dz_notes(node_id));
+
+CREATE TABLE dz_note_hashtags(
+    node_id NUMBER(20) NOT NULL,
+    hashtag VARCHAR(256) NOT NULL,
+    PRIMARY KEY (node_id, hashtag),
+    FOREIGN KEY (node_id) REFERENCES dz_notes(node_id));
+
+-- Sessions ------------------------------------------------------------------
+CREATE TABLE dz_sessions(
+    session_id CHAR(64) NOT NULL,
+    user_id NUMBER(20) NOT NULL,
+    established_time_utc TIMESTAMP(3) NOT NULL,
+    last_ping_time_utc TIMESTAMP(3) NOT NULL,
+    PRIMARY KEY (session_id, user_id));
+
+CREATE TABLE dz_session_notepages(
+    session_id CHAR(64) NOT NULL,
+    node_id NUMBER(20) NOT NULL,
+    revision_id_sha256 CHAR(64) NOT NULL,
+    PRIMARY KEY (session_id, node_id),
+    FOREIGN KEY (session_id) REFERENCES dz_sessions(session_id),
+    FOREIGN KEY (node_id, revision_id_sha256)
+      REFERENCES dz_notepage_revisions(node_id, revision_id_sha256));
 
 COMMIT;
-
