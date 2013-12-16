@@ -242,6 +242,7 @@ class User(Base):
     display_name = Column(String(256), nullable=True)
     password_pbkdf2 = Column(CHAR(256), nullable=True)
     is_group = Column(CHAR(1), nullable=False)
+    is_administrator = Column(CHAR(1), nullable=False)
 
     user_domain = relationship('UserDomain')
 
@@ -277,7 +278,11 @@ class Node(Base):
     node_name = Column(String(64), nullable=False)
     is_active = Column(CHAR(1), nullable=False)
 
-    parent = relationship("Node", backref="children")
+    parent = relationship(
+        "Node",
+        primaryjoin=(parent_node_id==node_id),
+        remote_side=(node_id,),
+        backref="children")
 
     __table_args__ = (
         UniqueConstraint("parent_node_id", "node_name"),
@@ -416,14 +421,17 @@ class Note(Node):
 
     node_id = Column(Integer, ForeignKey('dz_nodes.node_id'), nullable=False,
                      primary_key=True)
-    on_top_of_node_id = Column(Integer, ForeignKey('dz_notes.node_id'),
+    on_top_of_node_id = Column(Integer,
+                               ForeignKey('dz_notes.node_id'),
                                nullable=True)
     contents_markdown = Column(Text, nullable=True)
     contents_hash_sha256 = Column(CHAR(64), nullable=True)
     x_pos_um = Column(Integer, nullable=False)
     y_pos_um = Column(Integer, nullable=False)
 
-    on_top_of_node = relationship("Note")
+    on_top_of_node = relationship(
+        "Note",
+        primaryjoin=(on_top_of_node_id==node_id))
 
     __mapper_args__ = {
         'polymorphic_identity': NODE_TYPE_ID_NOTE,

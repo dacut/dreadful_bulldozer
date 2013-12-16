@@ -1,0 +1,114 @@
+#!/usr/bin/env python2.7
+from __future__ import absolute_import, print_function
+import dozer.dao as dao
+from getopt import getopt, GetoptError
+from getpass import getpass
+from passlib.hash import pbkdf2_sha512
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sys import argv, exit, stderr, stdin
+
+def add_user(session, username, password, display_name, is_administrator):
+    hashed_password = pbkdf2_sha512.encrypt(password)
+    if not is_administrator or is_administrator in ("N", "n"):
+        is_admin_str = "N"
+    else:
+        is_admin_str = "Y"
+    user = dao.User(user_domain_id=0, user_name=username,
+             password_pbkdf2=hashed_password, is_group='N',
+             is_administrator=is_admin_str)
+    session.add(user)
+    session.commit()
+    print("Added %s as user id %d" % (username, user.user_id))
+    return
+
+def main(args):
+    is_administrator = False
+    display_name = None
+    username = None
+    password = None
+
+    try:
+        opts, args = getopt(args, "d:a",
+                            ["display-name=", "display=", "administrator",
+                             "admin"])
+    except GetoptError as e:
+        print(e, fd=stderr)
+        usage()
+        return 1
+
+    while len(args) > 0:
+        if username is None:
+            username = args[0]
+            args = args[1:]
+        elif password is None:
+            password = args[0]
+            args = args[1:]
+        else:
+            print("Unknown argument %s" % (args[0],), file=stderr)
+            usage()
+            return 1
+
+    for opt, value in opts:
+        if opt in ("-d", "--display", "--display-name"):
+            display_name = value
+        elif opt in ("-a", "--admin", "--administrator"):
+            is_administrator = True
+
+    if username is None:
+        print("Username: ", end="")
+        username = stdin.readline().strip()
+    if len(username) == 0:
+        print("Username cannot be empty", file=stderr)
+        return 1
+    
+    if password is None:
+        while True:
+            password = ""
+            while len(password) == 0:
+                password = getpass("Password: ")
+                if len(password) == 0:
+                    print("Password cannot be empty", file=stderr)
+                else:
+                    break
+
+            confirm = getpass("Confirm password: ")
+            if password != confirm:
+                print("Passwords don't match", file=stderr)
+            else:
+                break
+    elif len(password) == 0:
+        print("Password cannot be empty", file=stderr)
+        return 1
+
+    if display_name is None:
+        print("Display name: ", end="")
+        display_name = stdin.readline()
+
+    engine = create_engine("sqlite:///dozer.db")
+    session = sessionmaker(bind=engine)()
+    add_user(session, username, password, display_name, is_administrator)
+    session.close()
+    return 0
+
+def usage(fd=stderr):
+    print("""\
+Usage: dozer-add-user [options] [username [password]]
+
+Add a new locally-authenticated Dreadful Bulldozer user to the system.
+If the display name, username, or password are not specified, they are
+prompted for.
+
+Options:
+    -d <name>
+    --display-name <name>
+        Sets the display name for the user.
+
+    -a
+    --administrator
+        Creates an administrative account.
+""", file=fd)
+    return
+
+if __name__ == "__main__":
+    exit(main(argv[1:]))

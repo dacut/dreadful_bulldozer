@@ -25,15 +25,17 @@ VALUES(2, 'note');
 
 -- Users and groups ----------------------------------------------------------
 CREATE TABLE dz_users(
-    user_id NUMBER(20) PRIMARY KEY NOT NULL, -- AUTOINCREMENT
+    user_id INTEGER PRIMARY KEY NOT NULL, -- AUTOINCREMENT
     user_domain_id NUMBER(10) NOT NULL,
     user_name VARCHAR(256),
     display_name VARCHAR(256),
     password_pbkdf2 CHAR(256),
     is_group CHAR(1) NOT NULL,
+    is_administrator CHAR(1) NOT NULL,
     UNIQUE (user_domain_id, user_name),
     FOREIGN KEY (user_domain_id) REFERENCES dz_user_domains(user_domain_id),
-    CHECK (is_group IN ('Y', 'N')));
+    CHECK (is_group IN ('Y', 'N')),
+    CHECK (is_administrator IN ('Y', 'N')));
 
 CREATE INDEX i_dz_usr_domname
 ON dz_users(user_domain_id, user_name);
@@ -51,13 +53,13 @@ ON dz_local_group_members(user_id, group_id);
 
 -- Create the system user
 INSERT INTO dz_users(user_id, user_domain_id, user_name, display_name,
-                     password_pbkdf2, is_group)
-VALUES(0, 0, 'system', 'System', NULL, 'N');
+                     password_pbkdf2, is_group, is_administrator)
+VALUES(0, 0, 'system', 'System', NULL, 'N', 'Y');
 
 -- Create the all_users catch-all group
 INSERT INTO dz_users(user_id, user_domain_id, user_name, display_name,
-                     password_pbkdf2, is_group)
-VALUES(1, 0, 'all_users', 'All users', NULL, 'Y');
+                     password_pbkdf2, is_group, is_administrator)
+VALUES(1, 0, 'all_users', 'All users', NULL, 'Y', 'N');
 
 INSERT INTO dz_local_group_members(group_id, user_id, administrator)
 VALUES(1, 0, 'Y');
