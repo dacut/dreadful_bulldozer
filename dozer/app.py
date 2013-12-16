@@ -1,7 +1,12 @@
 from __future__ import (absolute_import, print_function)
+from base64 import b64decode, b64encode
 import cherrypy
+from datetime import datetime
 import dozer.dao as dao
+import dozer.controller as ctl
+from dozer.jsonrpc import JSONRPC, expose_jsonrpc
 from functools import partial
+from httplib import METHOD_NOT_ALLOWED
 from logging import getLogger
 from mako.lookup import TemplateLookup
 from mako.runtime import Context
@@ -13,30 +18,26 @@ from sys import exit
 
 log = getLogger("dozer.app")
 
-def transactional(method):
-    def wrapper(self, *args, **kw):
-        cherrypy.request.session = self.session_class()
-        try:
-            return method(self, *args, **kw)
-        except:
-            cherrypy.request.session.rollback()
-            raise
-        else:
-            cherrypy.request.session.commit()
-        finally:
-            cherrypy.request.session.close()
-
-    wrapper.func_doc = method.func_doc
-    wrapper.func_name = method.func_name
-    return wrapper
+@expose_jsonrpc
+class JSONAPI(object):
+    @expose_jsonrpc
+    def create_folder(self, path=None, permissions=None,
+                      inherit_permissions=False):
+        if not isinstance(path, basestring):
+            raise InvalidParameterError("path must be a string")
+        if not isinstance(permissions):
+            pass
+            
+        ctl.create_folder(cherrypy.serving.request.db_session, path,
+                          permissions)
 
 class DreadfulBulldozer(object):
-    def __init__(self, server_root, session_class):
+    def __init__(self, server_root):
         super(DreadfulBulldozer, self).__init__()
         self.server_root = server_root
-        self.session_class = session_class
         self.template_dir = server_root + "/pages"
         self.template_lookup = TemplateLookup(directories=[self.template_dir])
+        self.jsonrpc = JSONRPC()
         return
 
     @cherrypy.expose
@@ -48,7 +49,14 @@ class DreadfulBulldozer(object):
         return page.render()
 
     @cherrypy.expose
-    @transactional
+    def login(self, *args, **kw):
+        page = Template(filename=self.template_dir + "/login.html",
+                        lookup=self.template_lookup,
+                        strict_undefined=True)
+        cherrypy.response.headers['Content-Type'] = "text/html"
+        return page.render(app=self)
+
+    @cherrypy.expose
     def notepage(self, *args, **kw):
         path = cherrypy.request.path_info.split("/")[1:]
         
@@ -56,7 +64,7 @@ class DreadfulBulldozer(object):
             raise cherrypy.HTTPRedirect("/notepage/", 302)
         
         path = "/" + "/".join(path[1:])
-        obj, remaining = dao.get_object_by_path(cherrypy.request.session, path)
+        obj, remaining = dao.get_object_by_path(cherrypy.request.db_session, path)
         if obj is None:
             raise cherrypy.HTTPError(
                 404, "Notepage %s does not exist" % (path,))
@@ -90,18 +98,22 @@ class DreadfulBulldozer(object):
         return page.render(document=doc)
 
     @cherrypy.expose
-    @transactional
     def create(self, *args, **kw):
         if cherrypy.request.method not in ("POST", "PUT"):
             raise cherrypy.HTTPError(405)
 
         document = dao.create_temp_document(
-            cherrypy.request.session,
+            cherrypy.request.db_session,
             dao.Entity("dozer_user", "dacut"))
 
-        cherrypy.request.session.commit()
+        cherrypy.request.db_session.commit()
         
         raise cherrypy.HTTPRedirect(
             "/notepage" + document.full_name, 302)
 
         return ""
+
+    def get_session(self, session_token):
+        cherrypy.request.user_session = None
+        cherrypy.request.user = None
+

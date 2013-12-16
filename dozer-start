@@ -2,20 +2,28 @@
 from __future__ import absolute_import, print_function
 from logging import basicConfig, getLogger, DEBUG
 from os.path import abspath
-from sys import path as sys_path
+from sys import path as sys_path, stderr
 
 root = abspath(".")
 
 if "." not in sys_path and root not in sys_path:
     sys_path[:0] = [root]
 
-basicConfig(level=DEBUG)
+basicConfig(level=DEBUG, stream=stderr)
 
 import cherrypy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dozer.dbpool import ConnectionPool, SQLitePool
 from dozer.app import DreadfulBulldozer
+from dozer.jsonrpc import JSONRPC
+from dozer.session import UserSessionTool
+from dozer.transaction import TransactionTool
+
+engine = create_engine("sqlite:///" + root + "/dozer.db")
+session_class = sessionmaker(bind=engine)
+cherrypy.tools.transaction = TransactionTool(session_class)
+cherrypy.tools.user_session = UserSessionTool()
 
 cherrypy.config.update({
         'server.socket_host': '127.0.0.1',
@@ -27,26 +35,36 @@ config = {
     '/': {
         'tools.trailing_slash.on': True,
         'tools.staticdir.root': root,
+        'tools.transaction.on': True,
+        'tools.user_session.on': True,
+    },
+    '/jsonrpc': {
+        'request.process_request_body': False,
+        'tools.transaction.on': True,
+        'tools.user_session.on': True,
     },
     '/static': {
         'tools.staticdir.on': True,
         'tools.staticdir.dir': 'static',
+        'tools.transaction.on': False,
+        'tools.user_session.on': False,
     },
     '/bootstrap': {
         'tools.staticdir.on': True,
         'tools.staticdir.dir': 'bootstrap',
+        'tools.transaction.on': False,
+        'tools.user_session.on': False,
     },
     '/jquery': {
         'tools.staticdir.on': True,
         'tools.staticdir.dir': 'jquery',
+        'tools.transaction.on': False,
+        'tools.user_session.on': False,
     },
 }
 
-engine = create_engine("sqlite:///" + root + "/dozer.db")
 app = cherrypy.tree.mount(
-    DreadfulBulldozer(server_root=root,
-                      session_class=sessionmaker(bind=engine)),
-    "/", config)
+    DreadfulBulldozer(server_root=root), "/", config)
 cherrypy.engine.start()
 cherrypy.engine.block()
 exit(0)
