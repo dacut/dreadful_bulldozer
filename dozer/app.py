@@ -5,6 +5,7 @@ from datetime import datetime
 import dozer.dao as dao
 import dozer.controller as ctl
 from dozer.jsonrpc import JSONRPC, expose_jsonrpc
+from dozer.session import LoginDeniedError
 from functools import partial
 from httplib import METHOD_NOT_ALLOWED
 from logging import getLogger
@@ -45,16 +46,32 @@ class DreadfulBulldozer(object):
         page = Template(filename=self.template_dir + "/index.html",
                         lookup=self.template_lookup,
                         strict_undefined=True)
-        cherrypy.response.headers['Content-Type'] = "text/html"
-        return page.render()
+        cherrypy.serving.response.headers['Content-Type'] = "text/html"
+        return page.render(app=self)
 
     @cherrypy.expose
     def login(self, *args, **kw):
+        error_msg = None
+
+        if cherrypy.serving.request.method in ("POST", "PUT"):
+            # See if we have a username/password combination
+            username = kw.get("username")
+            password = kw.get("password")
+            redirect = kw.get("redirect", "/")
+
+            if username is not None and password is not None:
+                try:
+                    cherrypy.tools.user_session.local_login(
+                        username=username, password=password)
+                    raise cherrypy.HTTPRedirect(redirect, 303)
+                except LoginDeniedError:
+                    error_msg = "Invalid username/password"
+                
         page = Template(filename=self.template_dir + "/login.html",
                         lookup=self.template_lookup,
                         strict_undefined=True)
-        cherrypy.response.headers['Content-Type'] = "text/html"
-        return page.render(app=self)
+        cherrypy.serving.response.headers['Content-Type'] = "text/html"
+        return page.render(app=self, error_msg=error_msg)
 
     @cherrypy.expose
     def notepage(self, *args, **kw):
@@ -88,7 +105,7 @@ class DreadfulBulldozer(object):
                 return self.delete_document(doc)
             else:
                 raise cherrypy.HTTPError(
-                    400, "Invalid method %s" % cherrypy.request.method)
+                    400, "Invalid method %s" % cherrypy.serving.request.method)
 
     def fetch_document(self, doc):
         page = Template(filename=self.template_dir + "/notepage.html",
@@ -99,14 +116,14 @@ class DreadfulBulldozer(object):
 
     @cherrypy.expose
     def create(self, *args, **kw):
-        if cherrypy.request.method not in ("POST", "PUT"):
+        if cherrypy.serving.request.method not in ("POST", "PUT"):
             raise cherrypy.HTTPError(405)
 
         document = dao.create_temp_document(
-            cherrypy.request.db_session,
+            cherrypy.serving.request.db_session,
             dao.Entity("dozer_user", "dacut"))
 
-        cherrypy.request.db_session.commit()
+        cherrypy.serving.request.db_session.commit()
         
         raise cherrypy.HTTPRedirect(
             "/notepage" + document.full_name, 302)
@@ -114,6 +131,6 @@ class DreadfulBulldozer(object):
         return ""
 
     def get_session(self, session_token):
-        cherrypy.request.user_session = None
-        cherrypy.request.user = None
+        cherrypy.serving.request.user_session = None
+        cherrypy.serving.request.user = None
 

@@ -23,6 +23,9 @@ A tool for wrapping a request within a database transaction.
         def transaction_handler(*args, **kw):
             try:
                 return next_handler(*args, **kw)
+            except cherrypy.HTTPRedirect:
+                request.db_session.commit()
+                raise
             except:
                 request.db_session.rollback()
                 raise

@@ -15,8 +15,9 @@ def add_user(session, username, password, display_name, is_administrator):
     else:
         is_admin_str = "Y"
     user = dao.User(user_domain_id=0, user_name=username,
-             password_pbkdf2=hashed_password, is_group='N',
-             is_administrator=is_admin_str)
+                    display_name=display_name,
+                    password_pbkdf2=hashed_password, is_group='N',
+                    is_administrator=is_admin_str)
     session.add(user)
     session.commit()
     print("Added %s as user id %d" % (username, user.user_id))

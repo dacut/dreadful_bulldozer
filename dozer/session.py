@@ -11,6 +11,9 @@ from passlib.hash import pbkdf2_sha512
 
 log = getLogger("dozer.session")
 
+class LoginDeniedError(RuntimeError):
+    pass
+
 class UserSessionTool(Tool):
     """\
 A tool for converting session data between tokenized HTTP cookies and
@@ -44,8 +47,8 @@ If the session data is not valid, this will set those attributes to None.
 
         session_token = request.cookie.get(self.session_cookie_name)
         if session_token is not None:
-            user_session = self.get_session(session_token)
-            if session is not None:
+            user_session = self.get_session(session_token.value)
+            if user_session is not None:
                 request.user_session = user_session
                 request.user = user_session.user
         return
@@ -75,9 +78,9 @@ Total length is 80 bytes (108 base-64 encoded characters).
                         session_token)
             return None
 
-        version = session_token[:4]
-        session_id = session_token[4:48]
-        digest = session_token[48:]
+        version = session_token_raw[:4]
+        session_id = session_token_raw[4:48]
+        digest = session_token_raw[48:]
 
         if version != "stv1":
             log.warning("Invalid session token (expected version 'stv1' "
@@ -133,14 +136,14 @@ Convert a session id to a session token, suitable for placement in a cookie.
         'wFv1RBTyIewFOzVmnlGL3UjKFMOCfDaYmpfEWeprZVz59saOIhPPahtcnxsLfKw'
     )
 
-    def local_login(self, user_name, password):
+    def local_login(self, username, password):
         """\
 Check whether the specified username/password combination is a valid local
 login; if so, create a new session for this user.
 """
         db_session = cherrypy.serving.request.db_session
         user = db_session.query(dao.User).filter_by(
-            user_domain_id=0, user_name=user_name).one()
+            user_domain_id=0, user_name=username).one()
 
         if user is None:
             # Attempt to validate against a random password.  This helps prevent
@@ -152,12 +155,13 @@ login; if so, create a new session for this user.
         if not pbkdf2_sha512.verify(password, expected_password):
             raise LoginDeniedError("Invalid username/password combination.")
 
-        return create_session(db_session, user.user_id)
+        return self.create_session(user.user_id)
 
     def create_session(self, user_id):
         """\
 Create a new session for the specified user.
 """
+        db_session = cherrypy.serving.request.db_session
         response = cherrypy.serving.response
 
         with open("/dev/urandom", "rb") as fd:
