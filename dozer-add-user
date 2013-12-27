@@ -1,42 +1,58 @@
 #!/usr/bin/env python2.7
+
 from __future__ import absolute_import, print_function
 import dozer.dao as dao
+import dozer.filesystem as fs
 from getopt import getopt, GetoptError
 from getpass import getpass
 from passlib.hash import pbkdf2_sha512
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sys import argv, exit, stderr, stdin
+from sys import argv, exit, stderr, stdin, stdout
 
-def add_user(session, username, password, display_name, is_administrator):
+def add_user(session, username, password, home_folder, display_name,
+             is_administrator):
     hashed_password = pbkdf2_sha512.encrypt(password)
     if not is_administrator or is_administrator in ("N", "n"):
-        is_admin_str = "N"
+        is_admin_int = 0
     else:
-        is_admin_str = "Y"
+        is_admin_int = 1
     user = dao.User(user_domain_id=0, user_name=username,
+                    home_folder=home_folder,
                     display_name=display_name,
-                    password_pbkdf2=hashed_password, is_group='N',
-                    is_administrator=is_admin_str)
+                    password_pbkdf2=hashed_password, is_group=0,
+                    is_administrator=is_admin_int)
     session.add(user)
     session.commit()
     print("Added %s as user id %d" % (username, user.user_id))
-    return
+    return user
 
 def main(args):
     is_administrator = False
     display_name = None
     username = None
     password = None
+    create_home_folder = True
 
     try:
-        opts, args = getopt(args, "d:a",
+        opts, args = getopt(args, "d:ah",
                             ["display-name=", "display=", "administrator",
-                             "admin"])
+                             "admin", "no-home-folder", "help"])
     except GetoptError as e:
-        print(e, fd=stderr)
+        print(e, file=stderr)
         usage()
         return 1
+
+    for opt, value in opts:
+        if opt in ("-d", "--display", "--display-name"):
+            display_name = value
+        elif opt in ("-a", "--admin", "--administrator"):
+            is_administrator = True
+        elif opt in ("--no-home-folder",):
+            create_home_folder = False
+        elif opt in ("-h", "--help"):
+            usage(fd=stdout)
+            return 0
 
     while len(args) > 0:
         if username is None:
@@ -49,12 +65,6 @@ def main(args):
             print("Unknown argument %s" % (args[0],), file=stderr)
             usage()
             return 1
-
-    for opt, value in opts:
-        if opt in ("-d", "--display", "--display-name"):
-            display_name = value
-        elif opt in ("-a", "--admin", "--administrator"):
-            is_administrator = True
 
     if username is None:
         print("Username: ", end="")
@@ -86,9 +96,24 @@ def main(args):
         print("Display name: ", end="")
         display_name = stdin.readline()
 
+    if create_home_folder:
+        home_folder = "/home/%s" % username
+    else:
+        home_folder = "/"
+
     engine = create_engine("sqlite:///dozer.db")
     session = sessionmaker(bind=engine)()
-    add_user(session, username, password, display_name, is_administrator)
+    user = add_user(session, username, password, home_folder, display_name,
+                    is_administrator)
+
+    if create_home_folder:
+        fs.context.db_session = session
+        fs.context.user = dao.User(user_id=fs.SYSTEM_USER_ID)
+
+        home = fs.get_node("/home")
+        home.create_subfolder(username, inherit_permissions=False,
+                              owner_user_id=user.user_id)
+    session.commit()
     session.close()
     return 0
 
@@ -101,15 +126,23 @@ If the display name, username, or password are not specified, they are
 prompted for.
 
 Options:
-    -d <name>
-    --display-name <name>
+    -d <name> / --display-name <name>
         Sets the display name for the user.
 
-    -a
-    --administrator
+    --no-home-folder
+        Do not create a home folder for the user.
+
+    -a / --administrator
         Creates an administrative account.
 """, file=fd)
     return
 
 if __name__ == "__main__":
     exit(main(argv[1:]))
+
+# Local variables:
+# mode: Python
+# tab-width: 8
+# indent-tabs-mode: nil
+# End:
+# vi: set expandtab tabstop=8

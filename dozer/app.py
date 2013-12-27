@@ -3,6 +3,7 @@ from base64 import b64decode, b64encode
 import cherrypy
 from datetime import datetime
 import dozer.dao as dao
+import dozer.filesystem as fs
 import dozer.controller as ctl
 from dozer.jsonrpc import JSONRPC, expose_jsonrpc
 from dozer.session import LoginDeniedError
@@ -16,6 +17,7 @@ from os.path import abspath, dirname, exists, isfile
 import sqlalchemy.orm.exc
 from sqlite3 import Connection
 from sys import exit
+from urllib import quote_plus as quote_url
 
 log = getLogger("dozer.app")
 
@@ -50,15 +52,14 @@ class DreadfulBulldozer(object):
         return page.render(app=self)
 
     @cherrypy.expose
-    def login(self, *args, **kw):
+    def login(self, username=None, password=None, redirect="/", logout=None,
+              **kw):
+        request = cherrypy.serving.request
+        response = cherrypy.serving.response
         error_msg = None
 
-        if cherrypy.serving.request.method in ("POST", "PUT"):
+        if request.method in ("POST", "PUT"):
             # See if we have a username/password combination
-            username = kw.get("username")
-            password = kw.get("password")
-            redirect = kw.get("redirect", "/")
-
             if username is not None and password is not None:
                 try:
                     cherrypy.tools.user_session.local_login(
@@ -66,12 +67,88 @@ class DreadfulBulldozer(object):
                     raise cherrypy.HTTPRedirect(redirect, 303)
                 except LoginDeniedError:
                     error_msg = "Invalid username/password"
+
+        if logout:
+            cherrypy.tools.user_session.logout()
                 
         page = Template(filename=self.template_dir + "/login.html",
                         lookup=self.template_lookup,
                         strict_undefined=True)
-        cherrypy.serving.response.headers['Content-Type'] = "text/html"
-        return page.render(app=self, error_msg=error_msg)
+        response.headers['Content-Type'] = "text/html"
+        return page.render(app=self, redirect=redirect, error_msg=error_msg)
+
+    @cherrypy.expose
+    def browse(self, *args, **kw):
+        request = cherrypy.serving.request
+        response = cherrypy.serving.response
+
+        if request.method in ("POST", "PUT"):
+            raise cherrypy.HTTPError(METHOD_NOT_ALLOWED)
+        
+        # Make sure we have a valid session.
+        if request.user_session is None:
+            # Redirect to the login page.
+            raise cherrypy.HTTPRedirect("/login?redirect=" +
+                                        quote_url("/browse"))
+        
+        home_folder = request.user.home_folder
+        if home_folder is None:
+            home_folder = "/"
+        elif not home_folder.startswith("/"):
+            home_folder = "/" + home_folder
+        
+        raise cherrypy.HTTPRedirect("/files" + home_folder)
+
+    @cherrypy.expose
+    def files(self, *args, **kw):
+        request = cherrypy.serving.request
+        response = cherrypy.serving.response
+
+        if request.method in ("POST", "PUT"):
+            # TODO: Handle file upload.
+            raise cherrypy.HTTPError(500, "Unable to handle uploads right now")
+        
+        # Make sure we have a valid session.
+        if request.user_session is None:
+            # Redirect to the login page.
+            raise cherrypy.HTTPRedirect(
+                "/login?redirect=%s" % quote_url("/files/" + "/".join(args)))
+
+        try:
+            node = fs.get_node("/" + "/".join(args))
+        except fs.FileNotFoundError as e:
+            raise cherrypy.HTTPError(404, str(e))
+        except fs.PermissionDeniedError as e:
+            raise cherrypy.HTTPError(403, str(e))
+
+        if isinstance(node, fs.Folder):
+            template = "folder.html"
+        elif isinstance(node, fs.Notepage):
+            template = "notepage.html"
+        elif isinstance(node, fs.Note):
+            template = "note.html"
+
+        page = Template(filename=self.template_dir + "/" + template,
+                            lookup=self.template_lookup,
+                            strict_undefined=True)
+        response.headers['Content-Type'] = "text/html"
+        return page.render(app=self, node=node)
+
+    @cherrypy.expose
+    def create(self, *args, **kw):
+        if cherrypy.serving.request.method not in ("POST", "PUT"):
+            raise cherrypy.HTTPError(405)
+
+        document = dao.create_temp_document(
+            cherrypy.serving.request.db_session,
+            dao.Entity("dozer_user", "dacut"))
+
+        cherrypy.serving.request.db_session.commit()
+        
+        raise cherrypy.HTTPRedirect(
+            "/notepage" + document.full_name, 302)
+
+        return ""
 
     @cherrypy.expose
     def notepage(self, *args, **kw):
@@ -113,22 +190,6 @@ class DreadfulBulldozer(object):
                         strict_undefined=True)
         cherrypy.response.headers['Content-Type'] = "text/html"
         return page.render(document=doc)
-
-    @cherrypy.expose
-    def create(self, *args, **kw):
-        if cherrypy.serving.request.method not in ("POST", "PUT"):
-            raise cherrypy.HTTPError(405)
-
-        document = dao.create_temp_document(
-            cherrypy.serving.request.db_session,
-            dao.Entity("dozer_user", "dacut"))
-
-        cherrypy.serving.request.db_session.commit()
-        
-        raise cherrypy.HTTPRedirect(
-            "/notepage" + document.full_name, 302)
-
-        return ""
 
     def get_session(self, session_token):
         cherrypy.serving.request.user_session = None

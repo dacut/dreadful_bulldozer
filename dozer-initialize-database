@@ -1,0 +1,66 @@
+#!/usr/bin/env python2.7
+from __future__ import absolute_import, print_function
+from getopt import getopt, GetoptError
+import sqlite3
+from sys import argv, exit, stderr, stdout
+
+def initialize(drop=False):
+    ddl = open("dozer_schema_sqlite3.sql", "r").read()
+    conn = sqlite3.connect("dozer.db")
+    cursor = conn.cursor()
+    cursor.execute("""\
+SELECT name FROM sqlite_master
+WHERE type='table' AND name LIKE 'dz\\_%' ESCAPE '\\'""")
+    rows = cursor.fetchall()
+    if len(rows) > 0:
+        if not drop:
+            print("""\
+Dozer schema already exists; refusing to drop existing tables without
+--drop option.""", file=stderr)
+            return 1
+
+        print("Existing schema detected and --drop specified.")
+        for (table_name,) in rows:
+            print("Dropping table %s" % table_name)
+            cursor.execute("DROP TABLE %s" % table_name)
+    
+    print("Creating Dozer tables.")
+    cursor.executescript(ddl)
+    conn.commit()
+    print("Done.")
+    return 0
+
+def main(args):
+    drop = False
+
+    try:
+        opts, args = getopt(args, "dh", ["drop", "help"])
+    except GetoptError as e:
+        print(e, file=stderr)
+        usage()
+        return 1
+
+    for opt, value in opts:
+        if opt in ("-d", "--drop"):
+            drop = True
+        elif opt in ("-h", "--help"):
+            usage(stdout)
+            return 0
+    
+    if len(args) > 0:
+        print("Unknown argument %s" % args[0], file=stderr)
+        usage()
+        return 1
+
+    return initialize(drop=drop)
+
+def usage(fd=stderr):
+    print("""\
+Usage: dozer-initialize-database [--drop]
+
+Initializes the dreadful bulldozer database.  If the database exists, it is
+not overwritten unless the --drop option is specified.""", file=fd)
+    return
+
+if __name__ == "__main__":
+    exit(main(argv[1:]))

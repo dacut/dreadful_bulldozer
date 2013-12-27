@@ -1,0 +1,9 @@
+body {
+    min-height: 2000px;
+    padding-top: 70px;
+}
+
+.disabled {
+    color: rgb(127, 127, 127);
+}
+

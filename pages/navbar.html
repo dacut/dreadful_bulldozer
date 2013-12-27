@@ -1,0 +1,43 @@
+<%!
+import cherrypy
+%><%page args="active_target=None" /><%
+# Navbar class elements -- we set the active one to "active"
+nc = {}
+if active_target is not None:
+    nc[active_target] = 'class="active"'
+
+# Navbar href targets -- we set the active one to point to this page.
+nh = {
+    'home': "/",
+    'browse': "/files",
+}
+if active_target is not None:
+    nh[active_target] = "#"
+%>\
+    <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Dreadful Bulldozer</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li ${nc.get("home", "")}><a href="${nh['home']}">Home</a></li>
+            <li ${nc.get("browse", "")}><a href="${nh['browse']}">Browse</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+% if cherrypy.serving.request.user is not None:
+            <li><a href="/preferences">${cherrypy.serving.request.user.display_name | h}</a></li>
+            <li><a href="/login?logout=1">Logout</a></li>
+% else:
+            <li><a href="/login">Login</a></li>
+% endif
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>

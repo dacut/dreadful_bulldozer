@@ -1,4 +1,4 @@
-<%page args="app, error_msg=None" />\
+<%page args="app, error_msg=None, redirect='/'" />\
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -52,27 +52,7 @@ body {
     </style>
   </head>
   <body>
-    <div class="navbar navbar-default navbar-fixed-top" role="navigation">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="#">Dreadful Bulldozer</a>
-        </div>
-        <div class="navbar-collapse collapse">
-          <ul class="nav navbar-nav">
-            <li class="active"><a href="#">Home</a></li>
-          </ul>
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="/login">Login</a></li>
-          </ul>
-        </div><!--/.nav-collapse -->
-      </div>
-    </div>
+<%include file="/navbar.html" />
     <div class="container">
       <form class="form-signin" role="form" method="post" action="/login">
         <h2 class="form-signin-heading">Dreadful Bulldozer Login</h2>
@@ -81,6 +61,7 @@ body {
 % endif
         <input name="username" type="text" class="form-control" placeholder="Username" required autofocus>
         <input name="password" type="password" class="form-control" placeholder="Password" required>
+        <input name="redirect" type="hidden" value="${redirect | h}"</input>
         <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>        
       </form>
     </div> <!-- /container -->

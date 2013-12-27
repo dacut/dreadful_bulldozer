@@ -1,12 +1,15 @@
 from __future__ import absolute_import, print_function
 from base64 import b64decode, b64encode
+import cherrypy
+from cherrypy._cptools import Tool
 from datetime import datetime
 import dozer.dao as dao
 import hashlib
 import hmac
 from logging import getLogger
-import cherrypy
-from cherrypy._cptools import Tool
+from sqlalchemy import or_
+from sqlalchemy.orm.exc import NoResultFound
+from struct import pack, unpack
 from passlib.hash import pbkdf2_sha512
 
 log = getLogger("dozer.session")
@@ -19,16 +22,11 @@ class UserSessionTool(Tool):
 A tool for converting session data between tokenized HTTP cookies and
 DAO objects.
 """
-    def __init__(self, session_cookie_name="dzsession",
-                 session_token_secret=None):
+    def __init__(self, session_cookie_name="dzsession"):
         super(UserSessionTool, self).__init__(
             point="before_handler", callable=self.__call__, name="UserSession",
             priority=80)
-        if session_token_secret is None:
-            with open("/dev/urandom", "rb") as fd:
-                session_token_secret = fd.read(32)
         self.session_cookie_name = session_cookie_name
-        self.session_token_secret = session_token_secret
         return
 
     def get_session_from_request(self):
@@ -53,15 +51,54 @@ If the session data is not valid, this will set those attributes to None.
                 request.user = user_session.user
         return
 
+    def get_secret_key(self, secret_key_id):
+        """\
+Returns the secret key for the given secret_key_id.
+
+If the secret_key_id is unknown or the secret is no longer accepted for
+validation, the result is None.
+"""
+        db_session = cherrypy.serving.request.db_session
+
+        try:
+            secret = db_session.query(dao.SessionSecret).filter_by(
+                session_secret_id=secret_key_id).one()
+            if (secret.accept_until_utc is not None and
+                secret.accept_until_utc < datetime.utcnow()):
+                return None
+            return secret.secret_key
+        except NoResultFound:
+            return None
+
+    def get_issuing_secret_key(self):
+        """\
+Returns the (key_id, secret_key) to use for signing new sessions.
+
+If a secret key is not available, a ValueError is raised."""
+        db_session = cherrypy.serving.request.db_session
+        now = datetime.utcnow()
+
+        try:
+            secret = (db_session.query(dao.SessionSecret)
+                      .filter(dao.SessionSecret.valid_from_utc <= now)
+                      .filter(or_(dao.SessionSecret.accept_until_utc == None,
+                                  dao.SessionSecret.accept_until_utc > now))
+                      .order_by("valid_from_utc desc")
+                      .limit(1).one())
+            return (secret.session_secret_id, secret.secret_key)
+        except NoResultFound:
+            raise ValueError("No valid secret key available.")
+
     def get_session(self, session_token):
         """\
 Convert a session token into a session object.
 
 The session token is a base-64 encoded string composed of:
     A 4-byte version identifier ("stv1")
+    A 4-byte secret identifier (little endian integer)
     A 44-byte session id (32-byte base-64 encoded binary data)
     A 32-byte HMAC-SHA256 hash authenticating the session id
-Total length is 80 bytes (108 base-64 encoded characters).
+Total length is 84 bytes (112 base-64 encoded characters).
 """
         db_session = cherrypy.serving.request.db_session
 
@@ -70,28 +107,40 @@ Total length is 80 bytes (108 base-64 encoded characters).
         except:
             log.warning("Invalid session token (base64 decode failed): %r",
                         session_token, exc_info=True)
+            self.logout()
             return None
 
-        if len(session_token_raw) != 80:
-            log.warning("Invalid session token (length should be 80 instead "
+        if len(session_token_raw) != 84:
+            log.warning("Invalid session token (length should be 84 instead "
                         "of %d): %r", len(session_token_raw),
                         session_token)
+            self.logout()
             return None
 
         version = session_token_raw[:4]
-        session_id = session_token_raw[4:48]
-        digest = session_token_raw[48:]
+        secret_key_id = unpack("<I", session_token_raw[4:8])[0]
+        session_id = session_token_raw[8:52]
+        digest = session_token_raw[52:]
 
         if version != "stv1":
             log.warning("Invalid session token (expected version 'stv1' "
                         "instead of %r): %r", version, session_token)
+            self.logout()
             return None
 
-        hasher = hmac.new(self.session_token_secret, session_id,
-                          hashlib.sha256)
+        secret_key = self.get_secret_key(secret_key_id)
+        if secret_key is None:
+            log.warning("Invalid session token (secret key %d unknown): %r",
+                        secret_key_id, session_token)
+            self.logout()
+            return None
+
+        hasher = hmac.new(secret_key, session_id, hashlib.sha256)
+
         if digest != hasher.digest():
             log.warning("Invalid session token (expected digest %r instead "
                         "of %r): %r", digest, hasher.digest(), session_token)
+            self.logout()
             return None
 
         try:
@@ -100,6 +149,7 @@ Total length is 80 bytes (108 base-64 encoded characters).
         except:
             log.warning("Invalid session token: Unknown session id %r",
                         session_id, exc_info=True)
+            self.logout()
             return None
 
         log.info("Session authenticated: session_id=%r user_id=%r", session_id,
@@ -117,9 +167,11 @@ Convert a session id to a session token, suitable for placement in a cookie.
         if len(session_id) != 44:
             raise ValueError("session_id must be a 44 character base64-encoded "
                              "identifier")
-        hasher = hmac.new(self.session_token_secret, session_id,
-                          hashlib.sha256)
-        return b64encode("stv1" + session_id + hasher.digest())
+        secret_id, secret_key = self.get_issuing_secret_key()
+        secret_id_packed = pack("<I", secret_id)
+        hasher = hmac.new(secret_key, session_id, hashlib.sha256)
+        return b64encode("stv1" + secret_id_packed + session_id +
+                         hasher.digest())
 
     def __call__(self):
         self.get_session_from_request()
@@ -176,3 +228,14 @@ Create a new session for the specified user.
             self.session_to_token(session_id)
 
         return session
+
+    def logout(self):
+        """\
+Log out the current user.  This must be called before the page is rendered.
+"""
+        request = cherrypy.serving.request
+        response = cherrypy.serving.response
+        request.user_session = None
+        request.user = None
+        cherrypy.serving.response.cookie[self.session_cookie_name] = ""
+        return

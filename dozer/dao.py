@@ -1,4 +1,5 @@
 from __future__ import absolute_import, print_function
+from base64 import b64decode
 from json import JSONEncoder
 from logging import getLogger
 import re
@@ -11,8 +12,9 @@ from sqlalchemy.schema import (
     CheckConstraint, Column, ForeignKey, ForeignKeyConstraint, Index, MetaData,
     PrimaryKeyConstraint, Table, UniqueConstraint,
 )
-from sqlalchemy.types import DateTime, CHAR, Integer, String, Text
+from sqlalchemy.types import Boolean, DateTime, CHAR, Integer, String, Text
 from time import time
+from urllib import quote_plus
 from uuid import uuid4 as random_uuid
 
 Base = declarative_base()
@@ -239,29 +241,40 @@ class User(Base):
                             ForeignKey('dz_user_domains.user_domain_id'),
                             nullable=False)
     user_name = Column(String(256), nullable=True)
+    home_folder = Column(String(256), nullable=True)
     display_name = Column(String(256), nullable=True)
     password_pbkdf2 = Column(CHAR(256), nullable=True)
-    is_group = Column(CHAR(1), nullable=False)
-    is_administrator = Column(CHAR(1), nullable=False)
+    is_group = Column(Boolean, nullable=False)
+    is_administrator = Column(Boolean, nullable=False)
 
     user_domain = relationship('UserDomain')
 
     __table_args__ = (
         UniqueConstraint("user_domain_id", "user_name"),
-        CheckConstraint("is_group IN ('Y', 'N')"),
     )
+    
+    def __repr__(self):
+        return ("<User user_id=%r user_domain_id=%r user_name=%r "
+                "display_name=%r>" % (self.user_id, self.user_domain_id,
+                                      self.user_name, self.display_name))
 Index('i_dz_usr_domname', User.user_domain_id, User.user_name)
 
 class LocalGroupMember(Base):
     __tablename__ = "dz_local_group_members"
 
-    group_id = Column(Integer, nullable=False)
-    user_id = Column(Integer, nullable=False)
-    administrator = Column(CHAR(1), nullable=False)
+    group_id = Column(Integer, ForeignKey('dz_users.user_id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('dz_users.user_id'), nullable=False)
+    administrator = Column(Boolean, nullable=False)
+
+    user = relationship("User", primaryjoin=(user_id==User.user_id),
+                        remote_side=(User.user_id,),
+                        backref="groups")
+    group = relationship("User", primaryjoin=(group_id==User.user_id),
+                         remote_side=(User.user_id,),
+                         backref="group_members")
     
     __table_args__ = (
         PrimaryKeyConstraint("group_id", "user_id"),
-        CheckConstraint("administrator IN ('Y', 'N')"),
     )
 Index("i_dz_lgm_user_group", LocalGroupMember.user_id,
       LocalGroupMember.group_id)
@@ -276,7 +289,32 @@ class Node(Base):
     parent_node_id = Column(Integer, ForeignKey('dz_nodes.node_id'),
                             nullable=True)
     node_name = Column(String(64), nullable=False)
-    is_active = Column(CHAR(1), nullable=False)
+    is_active = Column(Boolean, nullable=False)
+    inherit_permissions = Column(Boolean, nullable=False)
+
+    @property
+    def full_name(self):
+        if self.parent is not None:
+            parent_full_name = self.parent.full_name
+            if parent_full_name == "/":
+                return "/" + self.node_name
+            else:
+                return parent_full_name + "/" + self.node_name
+        else:
+            return "/"
+
+    @property
+    def relurl(self):
+        if self.parent is not None:
+            node_suburl = quote_plus(self.node_name.encode("utf-8"))
+            parent_relurl = self.parent.relurl
+            if parent_relurl == "/":
+                return "/" + node_suburl
+            else:
+                return parent_relurl + "/" + node_suburl
+        else:
+            return "/"
+            
 
     parent = relationship(
         "Node",
@@ -286,12 +324,18 @@ class Node(Base):
 
     __table_args__ = (
         UniqueConstraint("parent_node_id", "node_name"),
-        CheckConstraint("is_active IN ('Y', 'N')"),
     )
 
     __mapper_args__ = {
         'polymorphic_on': node_type_id,
     }
+
+    def __repr__(self):
+        return ("<%s node_id=%r node_type_id=%r parent_node_id=%r "
+                "node_name=%r is_active=%r inherit_permissions=%r>" % (
+                    self.__class__.__name__, self.node_id, self.node_type_id,
+                    self.parent_node_id, self.node_name, self.is_active,
+                    self.inherit_permissions))
 Index("i_dz_node_parent_id", Node.parent_node_id, Node.node_name)
 
 class AccessControlEntry(Base):
@@ -299,7 +343,7 @@ class AccessControlEntry(Base):
 
     node_id = Column(Integer, ForeignKey("dz_nodes.node_id"), nullable=False)
     user_id = Column(Integer, ForeignKey("dz_users.user_id"), nullable=False)
-    permissions = Column(String(32), nullable=False)
+    permissions = Column(Integer, nullable=False)
     
     node = relationship("Node", backref="permissions")
     user = relationship("User")
@@ -335,38 +379,28 @@ class Folder(Node):
 
     node_id = Column(Integer, ForeignKey('dz_nodes.node_id'),
                      nullable=False, primary_key=True)
-    owner_user_id = Column(Integer, ForeignKey('dz_users.user_id'),
-                           nullable=False)
-    inherit_permissions = Column(CHAR(1), nullable=False)
-
-    owner_user = relationship('User')
     
-    __table_args__ = (
-        CheckConstraint("inherit_permissions IN ('Y', 'N')"),
-    )
-
     __mapper_args__ = {
         'polymorphic_identity': NODE_TYPE_ID_FOLDER,
     }
+
+    def __repr__(self):
+        return ("<Folder node_id=%r node_name=%r>" %
+                (self.node_id, self.node_name))
 
 class Notepage(Node):
     __tablename__ = "dz_notepages"
 
     node_id = Column(Integer, ForeignKey('dz_nodes.node_id'), nullable=False,
                      primary_key=True)
-    owner_user_id = Column(Integer, ForeignKey('dz_users.user_id'),
-                           nullable=False)
     current_revision_id_sha256 = Column(CHAR(64), nullable=True)
-    snap_to_grid = Column(CHAR(1), nullable=True)
+    snap_to_grid = Column(Boolean, nullable=True)
     grid_x_um = Column(Integer, nullable=True)
     grid_y_um = Column(Integer, nullable=True)
     grid_x_subdivisions = Column(Integer, nullable=True)
     grid_y_subdivisions = Column(Integer, nullable=True)
 
-    owner_user = relationship('User')
-    
     __table_args__ = (
-        CheckConstraint("snap_to_grid IN ('Y', 'N')"),
         CheckConstraint("grid_x_um IS NULL OR grid_x_um > 0"),
         CheckConstraint("grid_y_um IS NULL OR grid_y_um > 0"),
         CheckConstraint("grid_x_subdivisions IS NULL OR "
@@ -459,6 +493,20 @@ class Session(Base):
 
     user = relationship("User", backref="sessions")
 Index("i_dz_sess_uid", Session.user_id, Session.last_ping_time_utc.desc())
+
+class SessionSecret(Base):
+    __tablename__ = "dz_session_secrets"
+
+    session_secret_id = Column(Integer, nullable=False, primary_key=True,
+                               autoincrement=True)
+    secret_key_base64 = Column(CHAR(44), nullable=False)
+    valid_from_utc = Column(DateTime, nullable=False)
+    accept_until_utc = Column(DateTime, nullable=True)
+
+    @property
+    def secret_key(self):
+        return b64decode(self.secret_key_base64)
+Index("i_dz_ssec_valid", SessionSecret.valid_from_utc.desc())
 
 class SessionNotepage(Base):
     __tablename__ = "dz_session_notepages"

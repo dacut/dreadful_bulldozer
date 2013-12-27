@@ -8,9 +8,6 @@ class DatabaseSchemaError(RuntimeError):
 class InvalidPathNameError(RuntimeError):
     pass
 
-class PermissionDeniedError(RuntimeError):
-    pass
-
 class InvalidDocumentTypeError(RuntimeError):
     pass
 
@@ -73,27 +70,6 @@ def create_folder(db_session, path, owner_user_id, permissions=None,
     # Make sure the user has permissions to navigate each subfolder.
     check_permissions(db_session, path_list[:-1], owner, permissions="N")
 
-def check_folder_permissions(folder, desired_permissions, all_ids):
-    for p in folder.permissions:
-        if p.user_id not in all_ids:
-            # This permission entry doesn't apply.
-            continue
-
-        if all([dp in p.permissions for dp in desired_permissions]):
-            # All permissions granted.
-            return True
-
-    # Does this folder inherit its permissions?
-    if folder.inherit_permissions == "Y" and folder.parent_node_id is not None:
-        return check_folder_permissions(
-            folder.parent, desired_permissions, all_ids)
-
-    # Cannot navigate this folder.
-    return False
-
-def can_navigate(folder, all_ids):
-    return check_folder_permissions(folder, "N", all_ids)
-
 def check_permissions(db_session, path, user_id, desired_permissions,
                       user_group_ids=None):
     if user_group_ids is None:
@@ -129,6 +105,3 @@ def check_permissions(db_session, path, user_id, desired_permissions,
     
     return True
 
-def get_root_folder(db_session):
-    return db_session.query(dao.Folder).filter_by(
-        node_id=0, parent_node_id=None, node_name=None, is_active='Y').one()

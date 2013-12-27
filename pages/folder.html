@@ -1,0 +1,100 @@
+<%!
+import cherrypy
+import dozer.dao as dao
+import dozer.filesystem as fs
+%><%page args="app, node" /><%
+hierarchy = node.hierarchy
+
+# Only display up to 5 path elements
+if len(hierarchy) <= 5:
+    displayed_hierarchy = hierarchy
+else:
+    displayed_hierarchy = [hierarchy[0], None] + hierarchy[-4:]
+%>\
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="shortcut icon" href="../../docs-assets/ico/favicon.png">
+    <title>${node.full_name | h}</title>
+    <link href="/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/folder.css" rel="stylesheet">
+    <script type="text/javascript"><!--
+node = ${node.json}
+--></script>
+  </head>
+  <body>
+<%include file="/navbar.html" args="active_target='browse'" />
+    <div class="container">
+      <ol class="breadcrumb">
+% for h in displayed_hierarchy:
+<% name = h.name if h.node_id != 0 else "[root]" %>\
+%     if h is None:
+        <li>...</li>
+%     elif h is node:
+        <li class="active">${name | h}</li>
+%     else:
+        <li><a href="/files${h.full_name | h}">${name | h}</a></li>
+%     endif
+% endfor
+      </ol>
+      <div class="row">
+        <div class="col-md-3 hidden-sm">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h3 class="panel-title">Actions</h3>
+            </div>
+            <div class="panel-body">
+% if node.access(fs.PERM_CREATE_CHILD):
+              <a href="#" id="create_folder">Create folder</a><br>
+              <a href="#" id="create_notepage">Create notepage</a><br>
+% else:
+              <span class="disabled">Create folder</a><br>
+              <span class="disabled">Create notepage</a><br>
+% endif
+            </div>
+          </div>
+        </div>
+        <div class="col-md-9 col-xs-12">
+          <table class="table table-striped">
+            <tr><th width="30px">&nbsp;</th><th>Filename</th><th>Type</th></tr>
+<% nentries = 0 %>\
+% for child in node.children:
+<%
+    nentries += 1
+    target = child.relurl
+    if isinstance(child, fs.Folder):
+        child_type = "Folder"
+        icon = "glyphicons_144_folder_open.png"
+        target += "/"
+    elif isinstance(child, fs.Notepage):
+        child_type = "Notepage"
+        icon = "glyphicons_039_notes.png"
+    elif isinstance(child, fs.Note):
+        child_type = "Note"
+        icon = "glyphicons_309_comments.png"
+    else:
+        child_type = "Unknown"
+        icon = "glyphicons_036_file.png"
+%>\
+            <tr>\
+<td valign="center"><img src="/static/glyphicons/${icon}"></td>\
+<td valign="center">\
+<a href="/files${target|h}">${child.name | h}</a></td>\
+<td valign="center">${child_type|h}</td></tr>
+% endfor
+            <tr><td>&nbsp;</td>\
+<td colspan="2">${nentries} ${"entries" if nentries != 1 else "entry"}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/static/folder.js"></script>
+  </body>
+</html>
