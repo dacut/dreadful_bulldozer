@@ -4,8 +4,7 @@ import cherrypy
 from datetime import datetime
 import dozer.dao as dao
 import dozer.filesystem as fs
-import dozer.controller as ctl
-from dozer.jsonrpc import JSONRPC, expose_jsonrpc
+import dozer.jsonrpc as jsonrpc
 from dozer.session import LoginDeniedError
 from functools import partial
 from httplib import METHOD_NOT_ALLOWED
@@ -21,18 +20,16 @@ from urllib import quote_plus as quote_url
 
 log = getLogger("dozer.app")
 
-@expose_jsonrpc
-class JSONAPI(object):
-    @expose_jsonrpc
-    def create_folder(self, path=None, permissions=None,
-                      inherit_permissions=False):
-        if not isinstance(path, basestring):
-            raise InvalidParameterError("path must be a string")
-        if not isinstance(permissions):
-            pass
-            
-        ctl.create_folder(cherrypy.serving.request.db_session, path,
-                          permissions)
+@jsonrpc.expose
+class DozerAPI(object):
+    @jsonrpc.expose
+    def create_folder(self, node_name=None, inherit_permissions=True):
+        return fs.make_folder(folder_name=node_name,
+                              inherit_permissions=inherit_permissions)
+
+    @jsonrpc.expose
+    def list_folder(self, folder_name=None):
+        return fs.get_node(folder_name).children
 
 class DreadfulBulldozer(object):
     def __init__(self, server_root):
@@ -40,7 +37,8 @@ class DreadfulBulldozer(object):
         self.server_root = server_root
         self.template_dir = server_root + "/pages"
         self.template_lookup = TemplateLookup(directories=[self.template_dir])
-        self.jsonrpc = JSONRPC()
+        self.jsonrpc = jsonrpc.JSONRPC()
+        self.jsonrpc.dozer = DozerAPI()
         return
 
     @cherrypy.expose

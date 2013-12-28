@@ -56,15 +56,17 @@ var dozer = (function () {
         var ajaxRequest, xhr;
 
         ajaxRequest = {
+            "type": "POST",
             "url": "/jsonrpc",
-            "data": {
+            "data": JSON.stringify({
                 "jsonrpc": "2.0",
                 "method": api,
                 "params": params,
                 "id": id,
-            },
+            }),
             "dataType": "json",
-            "contentType": "application/json"
+            "contentType": "application/json",
+            "processData": false
         };
 
         if (success !== undefined) {
@@ -96,7 +98,7 @@ var dozer = (function () {
                 };
             }
 
-            jsonrpc_call("create_folder", {"node_name": node_name},
+            jsonrpc_call("dozer.create_folder", {"node_name": node_name},
                          success, error);
         }
     }

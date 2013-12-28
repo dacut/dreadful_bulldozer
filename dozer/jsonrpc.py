@@ -1,7 +1,10 @@
 import json
 import cherrypy
 import dozer.dao as dao
+from logging import getLogger
 from traceback import format_exc
+
+log = getLogger("dozer.jsonrpc")
 
 def create_error(code, message, data=None, id=None):
     error = {
@@ -20,9 +23,21 @@ def create_error(code, message, data=None, id=None):
 
     return result
 
-def expose_jsonrpc(f):
+def expose(f):
     f.jsonrpc = True
     return f
+
+def to_json_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+
+    try:
+        return obj.json
+    except AttributeError:
+        raise TypeError("Cannot serialize %r" % (obj,))
+
+def to_json(obj):
+    return json.dumps(obj, default=to_json_default)
 
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600
@@ -37,7 +52,7 @@ class JSONRPC(object):
     @cherrypy.expose
     def default(self, *args, **kw):
         if cherrypy.request.method not in ("POST", "PUT"):
-            return json.dumps(
+            return to_json(
                 create_error(
                     code=PARSE_ERROR,
                     message="Invalid HTTP method; must use POST or PUT"))
@@ -46,7 +61,8 @@ class JSONRPC(object):
         try:
             json_data = json.loads(data)
         except Exception as e:
-            return json.dumps(
+            log.error("json.loads of %r failed", data, exc_info=True)
+            return to_json(
                 create_error(
                     code=PARSE_ERROR,
                     message="Malformed JSON-RPC request"))
@@ -59,20 +75,21 @@ class JSONRPC(object):
             result = [el for el in request if el is not None]
         elif isinstance(json_data, dict):
             # Single requst
-            result = self._handle_request(el)
+            result = self._handle_request(json_data)
         else:
             # Malformed
             result = create_error(
                 code=PARSE_ERROR,
                 message="Malformed JSON-RPC request")
             
-        return json.dumps(result)
-    
+        return to_json(result, default=JSONRPC._json_default)
+
     def _handle_request(self, request):
         jsonrpc = request.get("jsonrpc")
         method_name = request.get("method")
         params = request.get("params")
         id = request.get("id")
+        log = getLogger("dozer.jsonrpc._handle_request")
 
         if jsonrpc not in (None, "2.0"):
             return create_error(
@@ -90,17 +107,21 @@ class JSONRPC(object):
         method_parts = method_name.split(".")
         current_object = self
 
+        log.debug("method_parts: %r", method_parts)
+
         for part in method_parts:
-            next_object = getattr(current_object, method_name, None)
+            log.debug("current_object=%r; considering part %r", current_object,
+                      part)
+            next_object = getattr(current_object, part, None)
 
             if next_object is None or not hasattr(next_object, "jsonrpc"):
+                log.error("next_object invalid: %r", next_object)
                 return create_error(
                     code=METHOD_NOT_FOUND,
                     message="Method %s not found" % (method_name,),
                     id=id)
             
             current_object = next_object
-
         try:
             if isinstance(params, list):
                 result = current_object(*params)
@@ -109,14 +130,23 @@ class JSONRPC(object):
             else: #params is None
                 result = current_object()
 
+            cherrypy.serving.request.db_session.commit()
+
             return {
                 'jsonrpc': "2.0",
                 'id': id,
                 'result': result,
-            }
-                
+            }                
         except Exception as e:
+            log.error("Method call %s failed", method_name, exc_info=True)
             error_code = getattr(e, 'jsonrpc_error_code', INTERNAL_ERROR)
+            cherrypy.serving.request.db_session.rollback()
             return create_error(code=error_code, message=str(e),
                                 data=format_exc(), id=id)
 
+    @staticmethod
+    def _json_default(obj):
+        if hasattr(obj, "json"):
+            return obj.json
+        
+        raise TypeError("Unable to encode object %r" % (obj,))

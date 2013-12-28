@@ -304,17 +304,11 @@ class Node(Base):
             return "/"
 
     @property
-    def relurl(self):
-        if self.parent is not None:
-            node_suburl = quote_plus(self.node_name.encode("utf-8"))
-            parent_relurl = self.parent.relurl
-            if parent_relurl == "/":
-                return "/" + node_suburl
-            else:
-                return parent_relurl + "/" + node_suburl
+    def path_components(self):
+        if self.parent is None:
+            return []
         else:
-            return "/"
-            
+            return self.parent.path_components + [self.node_name]
 
     parent = relationship(
         "Node",

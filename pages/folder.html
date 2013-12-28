@@ -2,6 +2,7 @@
 import cherrypy
 import dozer.dao as dao
 import dozer.filesystem as fs
+from dozer.jsonrpc import to_json
 %><%page args="app, node" /><%
 hierarchy = node.hierarchy
 
@@ -21,10 +22,11 @@ else:
     <meta name="author" content="">
     <link rel="shortcut icon" href="../../docs-assets/ico/favicon.png">
     <title>${node.full_name | h}</title>
-    <link href="/bootstrap/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/bootstrap.css" rel="stylesheet">
     <link href="/static/folder.css" rel="stylesheet">
     <script type="text/javascript"><!--
-node = ${node.json}
+node = ${to_json(node)};
+node_contents = ${to_json(node.children)};
 --></script>
   </head>
   <body>
@@ -50,51 +52,61 @@ node = ${node.json}
             </div>
             <div class="panel-body">
 % if node.access(fs.PERM_CREATE_CHILD):
-              <a href="#" id="create_folder">Create folder</a><br>
-              <a href="#" id="create_notepage">Create notepage</a><br>
+              <a href="#" id="createFolder" data-toggle="modal"
+                 data-target="#createFolderDialog">Create folder</a><br>
+              <a href="#" id="createNotepage">Create notepage</a><br>
 % else:
-              <span class="disabled">Create folder</a><br>
-              <span class="disabled">Create notepage</a><br>
+              <span class="disabled"><abbr title="You do not have permissions to create folders in this folder">Create folder</abbr><br>
+              <span class="disabled"><abbr title="You do not have permissions to create notepages in this folder">Create notepage</abbr><br>
 % endif
             </div>
           </div>
         </div>
         <div class="col-md-9 col-xs-12">
           <table class="table table-striped">
-            <tr><th width="30px">&nbsp;</th><th>Filename</th><th>Type</th></tr>
-<% nentries = 0 %>\
-% for child in node.children:
-<%
-    nentries += 1
-    target = child.relurl
-    if isinstance(child, fs.Folder):
-        child_type = "Folder"
-        icon = "glyphicons_144_folder_open.png"
-        target += "/"
-    elif isinstance(child, fs.Notepage):
-        child_type = "Notepage"
-        icon = "glyphicons_039_notes.png"
-    elif isinstance(child, fs.Note):
-        child_type = "Note"
-        icon = "glyphicons_309_comments.png"
-    else:
-        child_type = "Unknown"
-        icon = "glyphicons_036_file.png"
-%>\
-            <tr>\
-<td valign="center"><img src="/static/glyphicons/${icon}"></td>\
-<td valign="center">\
-<a href="/files${target|h}">${child.name | h}</a></td>\
-<td valign="center">${child_type|h}</td></tr>
-% endfor
-            <tr><td>&nbsp;</td>\
-<td colspan="2">${nentries} ${"entries" if nentries != 1 else "entry"}</td></tr>
+            <tr id="folderListHeader"><th width="30px">&nbsp;</th><th>Filename</th><th>Type</th></tr>
+            <tr id="folderListSizeRow" class="folderListSize"><td>&nbsp;</td>\
+<td id="folderListSize" colspan="2"></td></tr>
           </table>
         </div>
       </div>
     </div>
-    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-    <script src="/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- Modal dialog for create_folder() -->
+    <div class="modal fade" id="createFolderDialog" tabindex="-1"
+         role="dialog" aria-labelledby="createFolderDialogLabel"
+         aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"
+                    aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="createFolderDialogLabel">Create
+              folder</h4>
+          </div>
+          <div class="modal-body">
+            <form role="form">
+              <div class="form-group">
+                <label for="folderName">Folder name</label>
+                <input type="text" class="form-control" id="folderName"
+                       placeholder="Enter folder name">
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn"
+                    data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary btn-default"
+                    id="createFolderAction">Create
+              folder</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/static/jquery-1.10.2.min.js"></script>
+    <script src="/static/bootstrap.min.js"></script>
+    <script src="/static/json2.js"></script>
+    <script src="/static/dozerapi.js"></script>
     <script src="/static/folder.js"></script>
   </body>
 </html>

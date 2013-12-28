@@ -5,3 +5,7 @@ bootstrap
 cherrypy
 jquery
 sqlalchemy
+static/bootstrap*
+static/glyphicons*
+static/jquery*
+static/json2.js

@@ -25,13 +25,100 @@ ALL_USERS_GROUP_ID = 1
 log = getLogger("dozer.filesystem")
 
 class FilesystemError(RuntimeError):
-    pass
+    jsonrpc_error_code = 2000
 
 class PermissionDeniedError(FilesystemError):
-    pass
+    jsonrpc_error_code = 2001
 
 class FileNotFoundError(FilesystemError):
-    pass
+    jsonrpc_error_code = 2002
+
+class InvalidPathNameError(FilesystemError):
+    jsonrpc_error_code = 2003
+
+class FilesystemConsistencyError(FilesystemError):
+    jsonrpc_error_code = 2004
+
+def get_root_folder():
+    """\
+Returns the root folder in the filesystem.
+"""
+    session = _request_db_session()
+    root = session.query(dao.Folder).filter_by(
+        node_id=0, parent_node_id=None, node_name='', is_active=1).one()
+
+    return FilesystemNode._from_dao(root)
+
+def get_node(path):
+    """\
+get_node(path[, session]) -> FilesystemNode
+
+Retrieves the node with the specified path name.
+
+The node must be accessible to the user -- that is, the parent folders must
+be accessible.
+"""
+    log = getLogger("dozer.filesystem.get_node")
+    session = _request_db_session()
+    log.debug("get_node(path=%r)", path)
+
+    if not isinstance(path, basestring) or path[0:1] != '/':
+        log.error("Path %r isn't a string", path)
+        raise InvalidPathNameError("path must be a string starting with '/'")
+
+    node = get_root_folder()
+    if path == "/":
+        # Just return the root.  Splitting an empty string returns a list
+        # containing an empty string, which isn't what we want.
+        return node
+
+    elements = path[1:].split("/")
+    log.debug("elements: %r", elements)
+    for el in elements:
+        log.debug("node=%r; considering child %r", node, el)
+        node = node.get_child(el)
+
+    log.debug("Done. Returning node %r", node)
+
+    return node
+
+def stringify_permissions(permissions):
+    """\
+stringify_permissions(permissions) -> str
+
+Convert a bitmap of permissions into the string permissions identifiers.
+"""
+    result = []
+    g = globals()
+
+    for perm_name in ("PERM_ADMINISTRATE", "PERM_READ_DOCUMENT",
+                      "PERM_EDIT_DOCUMENT", "PERM_DELETE_DOCUMENT",
+                      "PERM_NAVIGATE", "PERM_LIST_CONTENTS",
+                      "PERM_CREATE_CHILD", "PERM_DELETE_FOLDER",
+                      "PERM_DELETE_ANY_CHILD"):
+        if permissions & g[perm_name] != 0:
+            result.append(perm_name)
+
+    return "|".join(result)
+
+def make_folder(folder_name, inherit_permissions=True):
+    """\
+make_folder(folder_name, inherit_permissions=True) -> Folder
+
+Create a folder with the specified name.  If inherit_permissions is True,
+the new folder will inherit permissions from its parent.
+"""
+    if not isinstance(folder_name, basestring) or folder_name[:1] != '/':
+        raise InvalidPathNameError("folder_name must be a string starting "
+                                   "with '/'")
+
+    path, subfolder = folder_name.rsplit("/", 1)
+    if path == "":
+        path = "/"
+
+    parent = get_node(path)
+    return parent.create_subfolder(
+        subfolder, inherit_permissions=inherit_permissions)
 
 context = threading.local()
 
@@ -89,71 +176,6 @@ Finds the ids of the user plus all of the groups the user belongs to
 
     return result
 
-def get_root_folder():
-    """\
-Returns the root folder in the filesystem.
-"""
-    session = _request_db_session()
-    root = session.query(dao.Folder).filter_by(
-        node_id=0, parent_node_id=None, node_name='', is_active=1).one()
-
-    return FilesystemNode._from_dao(root)
-
-def get_node(path):
-    """\
-get_node(path[, session]) -> FilesystemNode
-
-Retrieves the node with the specified path name.
-
-The node must be accessible to the user -- that is, the parent folders must
-be accessible.
-"""
-    log = getLogger("dozer.filesystem.get_node")
-    session = _request_db_session()
-    log.debug("get_node(path=%r)", path)
-
-    if not isinstance(path, basestring):
-        log.error("Path %r isn't a string", path)
-        raise TypeError("paths must be strings")
-
-    if not path.startswith("/"):
-        raise ValueError("Paths must be absolute")
-
-    node = get_root_folder()
-    if path == "/":
-        # Just return the root.  Splitting an empty string returns a list
-        # containing an empty string, which isn't what we want.
-        return node
-
-    elements = path[1:].split("/")
-    log.debug("elements: %r", elements)
-    for el in elements:
-        log.debug("node=%r; considering child %r", node, el)
-        node = node.get_child(el)
-
-    log.debug("Done. Returning node %r", node)
-
-    return node
-
-def stringify_permissions(permissions):
-    """\
-stringify_permissions(permissions) -> str
-
-Convert a bitmap of permissions into the string permissions identifiers.
-"""
-    result = []
-    g = globals()
-
-    for perm_name in ("PERM_ADMINISTRATE", "PERM_READ_DOCUMENT",
-                      "PERM_EDIT_DOCUMENT", "PERM_DELETE_DOCUMENT",
-                      "PERM_NAVIGATE", "PERM_LIST_CONTENTS",
-                      "PERM_CREATE_CHILD", "PERM_DELETE_FOLDER",
-                      "PERM_DELETE_ANY_CHILD"):
-        if permissions & g[perm_name] != 0:
-            result.append(perm_name)
-
-    return "|".join(result)
-
 class FilesystemNode(object):
     def __init__(self, dao, **kw):
         super(FilesystemNode, self).__init__()
@@ -172,12 +194,12 @@ class FilesystemNode(object):
         return self._dao.node_name
 
     @property
-    def relurl(self):
-        return self._dao.relurl
-
-    @property
     def full_name(self):
         return self._dao.full_name
+
+    @property
+    def path_components(self):
+        return self._dao.path_components
 
     @property
     def inherit_permissions(self):
@@ -207,7 +229,7 @@ class FilesystemNode(object):
 
     @property
     def json(self):
-        return json.dumps(self._to_json())
+        return self._to_json()
 
     def access(self, desired_permissions):
         """\
@@ -285,7 +307,8 @@ indicating the desired mode:
         elif node.node_type_id == dao.NODE_TYPE_ID_NOTE:
             cls = Note
         else:
-            raise ValueError("Unknown node type id %d" % node.node_type_id)
+            raise FilesystemConsistencyError(
+                "Unknown node type id %d" % node.node_type_id)
 
         return cls(dao=node, **kw)
 
@@ -381,7 +404,7 @@ actions.
             'class': self.__class__.__name__,
             'node_id': self.node_id,
             'name': self.name,
-            'full_name': self.full_name,
+            'path_components': self.path_components,
             'inherit_permissions': self.inherit_permissions,
         }
 
