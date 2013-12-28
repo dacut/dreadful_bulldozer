@@ -102,6 +102,23 @@ jQuery(function($) {
         }
     }
 
+    $("#createFolder").click(function () {
+        $("#createFolderDialog").modal('show');
+    });
+    
+    $("#createFolderDialog").on('shown.bs.modal', function (e) {
+        $("#createFolderName").focus();
+    });
+
+    $("#createFolderName").keypress(function (e) {
+        if (e.charCode === 13) {
+            $("#createFolderAction").click();
+            return false;
+        }
+
+        return true;
+    });
+
     $("#createFolderAction").click(function () {
         var createFolderName = $("#createFolderName").val();
         dozer.create_folder(node.full_name + "/" + createFolderName,

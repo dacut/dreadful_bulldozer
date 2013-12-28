@@ -52,8 +52,7 @@ node_contents = ${to_json(node.children)};
             </div>
             <div class="panel-body">
 % if node.access(fs.PERM_CREATE_CHILD):
-              <a href="#" id="createFolder" data-toggle="modal"
-                 data-target="#createFolderDialog">Create folder</a><br>
+              <a href="#" id="createFolder">Create folder</a><br>
               <a href="#" id="createNotepage">Create notepage</a><br>
 % else:
               <span class="disabled"><abbr title="You do not have permissions to create folders in this folder">Create folder</abbr></span><br>
