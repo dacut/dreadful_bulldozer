@@ -2,9 +2,20 @@ jQuery(function($) {
     create_folder_in_flight = false;
 
     function onCreateFolderSuccess(id, result) {
+        node_contents.push(result);
+        refresh();
+        $("#createFolderDialog").modal('hide');
+        $("#createFolderName").val("");
     }
 
     function onCreateFolderError(id, error_block) {
+        $("#createFolderDialog").modal('hide');
+        $("#createFolderName").val("");
+    }
+
+    function onRefreshFolderSuccess(id, result) {
+        node_contents = result;
+        refresh();
     }
 
     function stricmp(a, b) {
@@ -92,9 +103,13 @@ jQuery(function($) {
     }
 
     $("#createFolderAction").click(function () {
-        var folderName = $("#folderName").val();
-        dozer.create_folder(node.full_name + "/" + folderName,
+        var createFolderName = $("#createFolderName").val();
+        dozer.create_folder(node.full_name + "/" + createFolderName,
                             onCreateFolderSuccess, onCreateFolderError);
+    });
+
+    $("#refreshFolderAction").click(function () {
+        dozer.list_folder(node.full_name, onRefreshFolderSuccess, null);
     });
 
     refresh();

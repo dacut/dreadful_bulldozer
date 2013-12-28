@@ -5,6 +5,7 @@ from logging import getLogger
 from traceback import format_exc
 
 log = getLogger("dozer.jsonrpc")
+wirelog = getLogger("dozer.jsonrpc.wire")
 
 def create_error(code, message, data=None, id=None):
     error = {
@@ -51,13 +52,17 @@ class InvalidParameterError(RuntimeError):
 class JSONRPC(object):
     @cherrypy.expose
     def default(self, *args, **kw):
-        if cherrypy.request.method not in ("POST", "PUT"):
+        request = cherrypy.serving.request
+
+        if request.method not in ("POST", "PUT"):
             return to_json(
                 create_error(
                     code=PARSE_ERROR,
                     message="Invalid HTTP method; must use POST or PUT"))
 
         data = cherrypy.request.rfile.read()
+        wirelog.debug("%s: %r", request.request_line, data)
+
         try:
             json_data = json.loads(data)
         except Exception as e:
@@ -66,6 +71,8 @@ class JSONRPC(object):
                 create_error(
                     code=PARSE_ERROR,
                     message="Malformed JSON-RPC request"))
+
+        log.debug("JSON-RPC request data: %r", json_data)
         
         if isinstance(json_data, list):
             # Batch request.
@@ -78,11 +85,13 @@ class JSONRPC(object):
             result = self._handle_request(json_data)
         else:
             # Malformed
+            log.error("Malformed JSON-RPC request: neither a list or dict: %r",
+                      json_data)
             result = create_error(
                 code=PARSE_ERROR,
                 message="Malformed JSON-RPC request")
             
-        return to_json(result, default=JSONRPC._json_default)
+        return to_json(result)
 
     def _handle_request(self, request):
         jsonrpc = request.get("jsonrpc")
@@ -90,6 +99,9 @@ class JSONRPC(object):
         params = request.get("params")
         id = request.get("id")
         log = getLogger("dozer.jsonrpc._handle_request")
+
+        log.debug("handle_request: jsonrpc=%r method_name=%r params=%r id=%r",
+                  jsonrpc, method_name, params, id)
 
         if jsonrpc not in (None, "2.0"):
             return create_error(

@@ -6,19 +6,46 @@ var dozer = (function () {
         next_id += 1;
         return result;
     }
-    
+
     function jsonrpc_result(id, succeeded, result, success, error) {
+        var orig_success, orig_error, result_id, result_block, error_block,
+            status_code, error_obj;
+
+        if (success === null || success === undefined) {
+            success = function () { };
+        }
+
+        if (error === null || error === undefined) {
+            error = function () { };
+        }
+
+        if (console.log) {
+            orig_success = success;
+            orig_error = error;
+
+            success = function(id, result_block) {
+                console.log("dozer.jsonrpc[" + id + "]: success: " +
+                            JSON.stringify(result_block));
+                return orig_success(id, result_block);
+            };
+
+            error = function(id, error_block) {
+                console.log("dozer.jsonrpc[" + id + "]: error: " +
+                            JSON.stringify(error_block));
+                return orig_error(id, error_block);
+            };
+        }
+
         if (succeeded) {
             // The AJAX call succeeded; let's see if the actual API call did.
-            var result_id = result["id"],
-                result_block = result["result"],
-                error_block = result["error"];
+            result_id = result["id"];
+            result_block = result["result"];
+            error_block = result["error"];
 
             if (result_id !== id) {
-                // What?  We got a different id back?
                 error(id, {
                     "code": -32603,
-                    "message": ("Internal JSONRPC error; server responded " +
+                    "message": ("Internal JSON-RPC error; server responded " +
                                 "request id " + id + " with id " + result_id +
                                 ".")
                 });
@@ -28,8 +55,8 @@ var dozer = (function () {
                     // No result or error block -- not a valid response.
                     error(id, {
                         "code": -32603,
-                        "message": ("Internal JSONRPC error; server did not " +
-                                    "return a result or error block.")
+                        "message": ("Internal JSON-RPC error; server did " +
+                                    "not return a result or error block.")
                     });
                 } else {
                     // Standard error.
@@ -40,12 +67,13 @@ var dozer = (function () {
             }
         } else {
             // The AJAX call failed.  Pass this onto the error callback.
-            var status_code = result["status_code"];
-            var error_obj = result["error_obj"];
+            status_code = result["status_code"];
+            error_obj = result["error_obj"];
 
             error(id, {
                 "code": -32000,
-                "message": ("JSONRPC error: AJAX call failed: " + status_code),
+                "message": ("JSON-RPC error: AJAX call failed: " +
+                            status_code),
                 "data": error_obj
             });
         }
@@ -84,6 +112,11 @@ var dozer = (function () {
             }
         }
 
+        if (console.log) {
+            console.log("dozer.jsonrpc[" + id + "]: request to " + api + "(" +
+                        JSON.stringify(params) + ")");
+        }
+
         xhr = jQuery.ajax(ajaxRequest);
         xhr["id"] = id;
         return xhr;
@@ -99,6 +132,18 @@ var dozer = (function () {
             }
 
             jsonrpc_call("dozer.create_folder", {"node_name": node_name},
+                         success, error);
+        },
+
+        list_folder: function (node_name, success, error) {
+            if (typeof(node_name) != "string") {
+                throw {
+                    "name": "TypeError",
+                    "message": "node_name must be a string"
+                };
+            }
+
+            jsonrpc_call("dozer.list_folder", {"node_name": node_name},
                          success, error);
         }
     }

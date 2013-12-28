@@ -28,8 +28,8 @@ class DozerAPI(object):
                               inherit_permissions=inherit_permissions)
 
     @jsonrpc.expose
-    def list_folder(self, folder_name=None):
-        return fs.get_node(folder_name).children
+    def list_folder(self, node_name=None):
+        return fs.get_node(node_name).children
 
 class DreadfulBulldozer(object):
     def __init__(self, server_root):

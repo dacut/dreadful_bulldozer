@@ -56,9 +56,10 @@ node_contents = ${to_json(node.children)};
                  data-target="#createFolderDialog">Create folder</a><br>
               <a href="#" id="createNotepage">Create notepage</a><br>
 % else:
-              <span class="disabled"><abbr title="You do not have permissions to create folders in this folder">Create folder</abbr><br>
-              <span class="disabled"><abbr title="You do not have permissions to create notepages in this folder">Create notepage</abbr><br>
+              <span class="disabled"><abbr title="You do not have permissions to create folders in this folder">Create folder</abbr></span><br>
+              <span class="disabled"><abbr title="You do not have permissions to create notepages in this folder">Create notepage</abbr></span><br>
 % endif
+              <a href="#" id="refreshFolderAction">Refresh</a><br>
             </div>
           </div>
         </div>
@@ -87,8 +88,8 @@ node_contents = ${to_json(node.children)};
           <div class="modal-body">
             <form role="form">
               <div class="form-group">
-                <label for="folderName">Folder name</label>
-                <input type="text" class="form-control" id="folderName"
+                <label for="createFolderName">Folder name</label>
+                <input type="text" class="form-control" id="createFolderName"
                        placeholder="Enter folder name">
               </div>
             </form>

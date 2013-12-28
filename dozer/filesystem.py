@@ -109,6 +109,7 @@ Create a folder with the specified name.  If inherit_permissions is True,
 the new folder will inherit permissions from its parent.
 """
     if not isinstance(folder_name, basestring) or folder_name[:1] != '/':
+        log.error("make_folder: invalid path %r", folder_name)
         raise InvalidPathNameError("folder_name must be a string starting "
                                    "with '/'")
 
@@ -404,6 +405,7 @@ actions.
             'class': self.__class__.__name__,
             'node_id': self.node_id,
             'name': self.name,
+            'full_name': self.full_name,
             'path_components': self.path_components,
             'inherit_permissions': self.inherit_permissions,
         }
