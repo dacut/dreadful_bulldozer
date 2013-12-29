@@ -28,6 +28,11 @@ class DozerAPI(object):
                               inherit_permissions=inherit_permissions)
 
     @jsonrpc.expose
+    def create_notepage(self, node_name=None, inherit_permissions=True):
+        return fs.make_notepage(notepage_name=node_name,
+                                inherit_permissions=inherit_permissions)
+
+    @jsonrpc.expose
     def list_folder(self, node_name=None):
         return fs.get_node(node_name).children
 

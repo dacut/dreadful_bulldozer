@@ -135,6 +135,18 @@ var dozer = (function () {
                          success, error);
         },
 
+        create_notepage: function (node_name, success, error) {
+            if (typeof(node_name) != "string") {
+                throw {
+                    "name": "TypeError",
+                    "message": "node_name must be a string"
+                };
+            }
+
+            jsonrpc_call("dozer.create_notepage", {"node_name": node_name},
+                         success, error);
+        },
+
         list_folder: function (node_name, success, error) {
             if (typeof(node_name) != "string") {
                 throw {

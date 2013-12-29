@@ -13,6 +13,18 @@ jQuery(function($) {
         $("#createFolderName").val("");
     }
 
+    function onCreateNotepageSuccess(id, result) {
+        node_contents.push(result);
+        refresh();
+        $("#createNotepageDialog").modal('hide');
+        $("#createNotepageName").val("");
+    }
+
+    function onCreateNotepageError(id, error_block) {
+        $("#createNotepageDialog").modal('hide');
+        $("#createNotepageName").val("");
+    }
+
     function onRefreshFolderSuccess(id, result) {
         node_contents = result;
         refresh();
@@ -84,8 +96,30 @@ jQuery(function($) {
 
             var row = ('<tr class="folderEntry">' +
                        '<td valign="center">' +
-                       '<img src="/static/glyphicons/' + icon + '"></td>' +
-                       '<td valign="center"><a href="/files' +
+                       '<span class="dropdown">' +
+                       '<a data-toggle="dropdown" href="#" id="fileMenu' + i
+                       + '">' +
+                       '<img src="/static/glyphicons/glyphicons_halflings_' +
+                       '113_chevron-down.png" width="9px" height="6px">' +
+                       '</a>' +
+                       '<ul class="dropdown-menu" role="menu" ' +
+                       'aria-labelledby="fileMenu' + i + '">' +
+                       '<li role="presentation">' +
+                       '<a role="menuitem" data-fileindex="' + i + '" ' +
+                       'class="renameAction" ' +
+                       'tabindex="-1" href="#">Rename</a>' +
+                       '</li>' +
+                       '<li role="presentation">' +
+                       '<a role="menuitem" class="deleteAction" ' +
+                       'tabindex="-1" href="#">Delete</a>' +
+                       '</li>' +
+                       '</ul></span>' +
+                       '&nbsp;&nbsp;' +
+                       '<img src="/static/glyphicons/' + icon +
+                       '" width="18px" height="13px">' +
+                       '</td>' +
+                       '<td valign="center">' +
+                       '<a href="/files' +
                        escapeHTML(target) + '">' + escapeHTML(node.name) +
                        '</a></td>' +
                        '<td valign="center">' + escapeHTML(nodeClass) +
@@ -94,6 +128,11 @@ jQuery(function($) {
             
             $("#folderListSizeRow").before(row);
         }
+
+        $(".renameAction").click(function (e) {
+            console.log("click");
+            console.log("rename: target=" + $(this).attr('data-fileindex'));
+        });
 
         if (nEntries == 1) {
             $("#folderListSize").text("1 entry");
@@ -123,6 +162,29 @@ jQuery(function($) {
         var createFolderName = $("#createFolderName").val();
         dozer.create_folder(node.full_name + "/" + createFolderName,
                             onCreateFolderSuccess, onCreateFolderError);
+    });
+
+    $("#createNotepage").click(function () {
+        $("#createNotepageDialog").modal('show');
+    });
+
+    $("#createNotepageDialog").on('shown.bs.modal', function(e) {
+        $("#createNotepageName").focus();
+    });
+
+    $("#createNotepageName").keypress(function (e) {
+        if (e.charCode == 13) {
+            $("#createNotepageAction").click();
+            return false;
+        }
+
+        return true;
+    });
+
+    $("#createNotepageAction").click(function () {
+        var createNotepageName = $("#createNotepageName").val();
+        dozer.create_notepage(node.full_name + "/" + createNotepageName,
+                              onCreateNotepageSuccess, onCreateNotepageError);
     });
 
     $("#refreshFolderAction").click(function () {

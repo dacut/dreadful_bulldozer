@@ -121,6 +121,26 @@ the new folder will inherit permissions from its parent.
     return parent.create_subfolder(
         subfolder, inherit_permissions=inherit_permissions)
 
+def make_notepage(notepage_name, inherit_permissions=True):
+    """\
+make_notepage(notepage_name, inherit_permissions=True) -> Notepage
+
+Create a notepage with the specified name.  If inherit_permissions is True,
+the new notepage will inherit permissions from its parent.
+"""
+    if not isinstance(notepage_name, basestring) or notepage_name[:1] != '/':
+        log.error("make_notepage: invalid path %r", notepage_name)
+        raise InvalidPathNameError("notepage_name must be a string starting "
+                                   "with '/'")
+
+    path, filename = notepage_name.rsplit("/", 1)
+    if path == "":
+        path = "/"
+
+    parent = get_node(path)
+    return parent.create_notepage(
+        filename, inherit_permissions=inherit_permissions)
+
 context = threading.local()
 
 def _request_user():
@@ -453,8 +473,59 @@ owner_user_id (defaults to the current user).
 
         return FilesystemNode._from_dao(folder_dao, parent=self)
 
+    def create_notepage(self, name, inherit_permissions=True,
+                        owner_user_id=None):
+        """\
+folder.create_notepage(name, inherit_permissions=True, owner_user_id=None)
+  -> Notepage
+
+Create a Notepage within this folder.  The current user must have
+PERM_CREATE_CHILD permissions within this folder.
+
+The new notepage grants PERM_ADMINISTRATE, PERM_READ_DOCUMENT,
+PERM_EDIT_DOCUMENT, and PERM_DELETE_DOCUMENT to the owner_user_id (defaults
+to the current user).
+"""
+        if not self.access(PERM_CREATE_CHILD):
+            raise PermissionDeniedError(
+                "No permission to create child notepages")
+        
+        if owner_user_id is None:
+            owner_user_id = _request_user_id()
+        
+        notepage_dao = dao.Notepage(node_type_id=dao.NODE_TYPE_ID_NOTEPAGE,
+                                    parent_node_id=self._dao.node_id,
+                                    node_name=name,
+                                    is_active=True,
+                                    inherit_permissions=inherit_permissions)
+        session = _request_db_session()
+        session.add(notepage_dao)
+        session.flush()
+
+        ace = dao.AccessControlEntry(user_id=owner_user_id,
+                                     node_id=notepage_dao.node_id,
+                                     permissions=(PERM_ADMINISTRATE |
+                                                  PERM_READ_DOCUMENT |
+                                                  PERM_EDIT_DOCUMENT |
+                                                  PERM_DELETE_DOCUMENT))
+        session.add(ace)
+        session.flush()
+
+        return FilesystemNode._from_dao(notepage_dao, parent=self)
+
 class Notepage(FilesystemNode):
-    pass
+    def _to_json(self):
+        d = super(Notepage, self)._to_json()
+        d['current_revision_id_sha256'] = self._dao.current_revision_id_sha256
+        d['snap_to_grid'] = self._dao.snap_to_grid
+        d['grid_x_um'] = self._dao.grid_x_um
+        d['grid_y_um'] = self._dao.grid_y_um
+        d['grid_x_subdivisions'] = self._dao.grid_x_subdivisions
+        d['grid_y_subdivisions'] = self._dao.grid_y_subdivisions
+        d['guides'] = [{'orientation': g.orientation,
+                        'position_um': g.position_um}
+                       for g in self._dao.guides]
+        return d
 
 class Note(FilesystemNode):
     pass
