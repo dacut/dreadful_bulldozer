@@ -353,8 +353,6 @@ class NoteDisplayPref(Base):
 
     node_id = Column(Integer, ForeignKey('dz_nodes.node_id'), nullable=False)
     hashtag = Column(String(256), nullable=True)
-    width_um = Column(Integer, nullable=True)
-    height_um = Column(Integer, nullable=True)
     background_color = Column(String(32), nullable=True)
     font_family = Column(String(256), nullable=True)
     font_size_millipt = Column(Integer, nullable=True)
@@ -449,17 +447,13 @@ class Note(Node):
 
     node_id = Column(Integer, ForeignKey('dz_nodes.node_id'), nullable=False,
                      primary_key=True)
-    on_top_of_node_id = Column(Integer,
-                               ForeignKey('dz_notes.node_id'),
-                               nullable=True)
     contents_markdown = Column(Text, nullable=True)
     contents_hash_sha256 = Column(CHAR(64), nullable=True)
     x_pos_um = Column(Integer, nullable=False)
     y_pos_um = Column(Integer, nullable=False)
-
-    on_top_of_node = relationship(
-        "Note",
-        primaryjoin=(on_top_of_node_id==node_id))
+    width_um = Column(Integer, nullable=False)
+    height_um = Column(Integer, nullable=False)
+    z_index = Column(Integer, nullable=False)
 
     __mapper_args__ = {
         'polymorphic_identity': NODE_TYPE_ID_NOTE,

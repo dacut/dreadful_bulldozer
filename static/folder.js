@@ -1,6 +1,4 @@
 jQuery(function($) {
-    create_folder_in_flight = false;
-
     function onCreateFolderSuccess(id, result) {
         node_contents.push(result);
         refresh();

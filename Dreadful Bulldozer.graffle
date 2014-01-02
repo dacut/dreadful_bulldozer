@@ -83,7 +83,7 @@
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -116,7 +116,7 @@
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1720\tx2314
@@ -253,7 +253,7 @@ ACCEPT_UNTIL_UTC	TIMESTAMP}</string>
 				<key>Pad</key>
 				<integer>4</integer>
 				<key>Text</key>
-				<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx560\tx1340\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
@@ -310,7 +310,7 @@ ACCEPT_UNTIL_UTC	TIMESTAMP}</string>
 				<key>Pad</key>
 				<integer>4</integer>
 				<key>Text</key>
-				<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx320\tx1067\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
@@ -370,7 +370,7 @@ ACCEPT_UNTIL_UTC	TIMESTAMP}</string>
 				<key>Pad</key>
 				<integer>4</integer>
 				<key>Text</key>
-				<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx320\tx1620\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
@@ -408,7 +408,7 @@ ACCEPT_UNTIL_UTC	TIMESTAMP}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -440,7 +440,7 @@ ACCEPT_UNTIL_UTC	TIMESTAMP}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1341\tx2215
@@ -493,7 +493,7 @@ ADMINISTRATOR	BOOLEAN*}</string>
 			<real>-1</real>
 			<key>Points</key>
 			<array>
-				<string>{1054.7999715805054, 93.599997520446777}</string>
+				<string>{1054.7999715805054, 93.599997520446763}</string>
 				<string>{921.59997940063477, 39.599902343571131}</string>
 			</array>
 			<key>Style</key>
@@ -580,7 +580,7 @@ ADMINISTRATOR	BOOLEAN*}</string>
 						<key>Pad</key>
 						<integer>4</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx560\tx1340\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
@@ -617,7 +617,7 @@ ADMINISTRATOR	BOOLEAN*}</string>
 							<key>Text</key>
 							<dict>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -650,7 +650,7 @@ ADMINISTRATOR	BOOLEAN*}</string>
 								<key>Align</key>
 								<integer>0</integer>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx917\tx1927
@@ -767,7 +767,7 @@ POSITION_UM	INT64	PK:3}</string>
 			<key>Points</key>
 			<array>
 				<string>{349.91998613357566, 223.19999504089355}</string>
-				<string>{340.19997726016595, 93.59999942779541}</string>
+				<string>{340.19997726016601, 93.59999942779541}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -828,7 +828,7 @@ POSITION_UM	INT64	PK:3}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -841,7 +841,7 @@ POSITION_UM	INT64	PK:3}</string>
 				</dict>
 				<dict>
 					<key>Bounds</key>
-					<string>{{280.79999256134039, 237.59999465942383}, {172.79998222019427, 79.199996948242188}}</string>
+					<string>{{280.79999256134039, 237.59999465942383}, {172.79998222019427, 64.799995422363281}}</string>
 					<key>Class</key>
 					<string>ShapedGraphic</string>
 					<key>ID</key>
@@ -861,15 +861,13 @@ POSITION_UM	INT64	PK:3}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1495\tx2580
 
 \f0\fs12 \cf0 NODE_ID	INT64*	PK:1 FK\
 HASHTAG	VARCHAR(256)	PK:2\
-WIDTH_UM	INT64\
-HEIGHT_UM	INT64\
 BACKGROUND_COLOR	VARCHAR(32)\
 FONT_FAMILY	VARCHAR(256)\
 FONT_SIZE_MILLIPT	INT32\
@@ -956,7 +954,7 @@ FONT_COLOR	VARCHAR(32)\
 						<key>Pad</key>
 						<integer>4</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx560\tx1340\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
@@ -993,7 +991,7 @@ FONT_COLOR	VARCHAR(32)\
 							<key>Text</key>
 							<dict>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -1026,7 +1024,7 @@ FONT_COLOR	VARCHAR(32)\
 								<key>Align</key>
 								<integer>0</integer>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1200\tx2142
@@ -1114,7 +1112,7 @@ NODE_NAME	VARCHAR(64)*}</string>
 						<key>Pad</key>
 						<integer>4</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1110\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
@@ -1168,7 +1166,7 @@ NODE_TYPE_ID	NODE_TYPE_NAME\
 							<key>Text</key>
 							<dict>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -1212,7 +1210,7 @@ NODE_TYPE_ID	NODE_TYPE_NAME\
 								<key>Align</key>
 								<integer>0</integer>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1481\tx2520
@@ -1387,7 +1385,7 @@ NODE_TYPE_NAME	VARCHAR(32)*}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -1420,7 +1418,7 @@ NODE_TYPE_NAME	VARCHAR(32)*}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1484\tx2272
@@ -1478,7 +1476,7 @@ INHERIT_PERMISSIONS	BOOLEAN}</string>
 			<key>Points</key>
 			<array>
 				<string>{194.39999485015869, 74.879998869895928}</string>
-				<string>{302.39998722076416, 54.44999885559082}</string>
+				<string>{302.39998722076422, 54.449998855590835}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -1537,7 +1535,7 @@ INHERIT_PERMISSIONS	BOOLEAN}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -1569,7 +1567,7 @@ INHERIT_PERMISSIONS	BOOLEAN}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx2019\tx2649
@@ -1661,7 +1659,7 @@ GRID_Y_SUBDIVISIONS	INT32}</string>
 						<key>Pad</key>
 						<integer>4</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx320\tx1620\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural
@@ -1707,7 +1705,7 @@ GRID_Y_SUBDIVISIONS	INT32}</string>
 							<key>Text</key>
 							<dict>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -1739,7 +1737,7 @@ GRID_Y_SUBDIVISIONS	INT32}</string>
 								<key>Align</key>
 								<integer>0</integer>
 								<key>Text</key>
-								<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+								<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1334\tx2291
@@ -1969,7 +1967,7 @@ PERMISSIONS	INT64*}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -2008,7 +2006,7 @@ PERMISSIONS	INT64*}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1343\tx2443
@@ -2063,7 +2061,7 @@ IS_GROUP	BOOLEAN*}</string>
 			<key>Points</key>
 			<array>
 				<string>{633.59998893737793, 145.43999954223614}</string>
-				<string>{979.19997310638439, 125.99987163521016}</string>
+				<string>{979.19997310638428, 125.99987163521016}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2120,7 +2118,7 @@ IS_GROUP	BOOLEAN*}</string>
 			<key>Points</key>
 			<array>
 				<string>{522.00011851727209, 395.99999237060547}</string>
-				<string>{522.44985212608992, 302.39999103546143}</string>
+				<string>{522.44985212608992, 316.79998874664307}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2227,7 +2225,7 @@ IS_GROUP	BOOLEAN*}</string>
 			<real>-1</real>
 			<key>Points</key>
 			<array>
-				<string>{194.39998722076416, 467.99990520461807}</string>
+				<string>{194.39998722076422, 467.99990520461807}</string>
 				<string>{280.7999849319458, 467.99987773874614}</string>
 			</array>
 			<key>Style</key>
@@ -2282,7 +2280,7 @@ IS_GROUP	BOOLEAN*}</string>
 			<real>-1</real>
 			<key>Points</key>
 			<array>
-				<string>{64.800141273182277, 446.39998817443848}</string>
+				<string>{64.800141273182206, 446.39998817443848}</string>
 				<string>{64.799856247264472, 381.59999073876259}</string>
 			</array>
 			<key>Style</key>
@@ -2527,7 +2525,7 @@ IS_GROUP	BOOLEAN*}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -2571,7 +2569,7 @@ IS_GROUP	BOOLEAN*}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1506\tx2068\tx2520
@@ -2630,7 +2628,7 @@ DOMAIN_CONFIG	CLOB}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -2670,7 +2668,7 @@ DOMAIN_CONFIG	CLOB}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1180\tx2210
@@ -2727,7 +2725,7 @@ HASHTAG	VARCHAR(256)*	PK:2}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -2740,7 +2738,7 @@ HASHTAG	VARCHAR(256)*	PK:2}</string>
 				</dict>
 				<dict>
 					<key>Bounds</key>
-					<string>{{482.39998722076416, 251.99999332427979}, {160.19999694824222, 50.399997711181641}}</string>
+					<string>{{482.39998722076416, 251.99999332427979}, {160.19999694824222, 64.799995422363281}}</string>
 					<key>Class</key>
 					<string>ShapedGraphic</string>
 					<key>ID</key>
@@ -2760,19 +2758,20 @@ HASHTAG	VARCHAR(256)*	PK:2}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
-\pard\tx1720\tx2314
+\pard\tx1694\tx2314
 
 \f0\fs12 \cf0 NODE_ID	INT64*	PK\
-\pard\tx1720\tx2314
-\cf0 ON_TOP_OF_NODE_ID	INT64\
-\pard\tx1720\tx2314
-\cf0 CONTENTS_MARKDOWN	CLOB\
+CONTENTS_MARKDOWN	CLOB\
 CONTENTS_HASH_SHA256	SHA256*\
 X_POS_UM	INT64*\
-Y_POS_UM	INT64*}</string>
+Y_POS_UM	INT64*\
+WIDTH_UM	INT64*\
+HEIGHT_UM	INT64*\
+\pard\tx1694\tx2314
+\cf0 Z_INDEX	INT32*}</string>
 					</dict>
 					<key>TextPlacement</key>
 					<integer>0</integer>
@@ -2823,7 +2822,7 @@ Y_POS_UM	INT64*}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -2862,7 +2861,7 @@ Y_POS_UM	INT64*}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1547\tx2137
@@ -2920,7 +2919,7 @@ REVISION_ID_SHA256	SHA256*	FK}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -2959,7 +2958,7 @@ REVISION_ID_SHA256	SHA256*	FK}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx1694\tx2776
@@ -3018,7 +3017,7 @@ LAST_PING_TIME_UTC	TIMESTAMP*}</string>
 					<key>Text</key>
 					<dict>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\qc
@@ -3050,7 +3049,7 @@ LAST_PING_TIME_UTC	TIMESTAMP*}</string>
 						<key>Align</key>
 						<integer>0</integer>
 						<key>Text</key>
-						<string>{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf400
+						<string>{\rtf1\ansi\ansicpg1252\cocoartf1265
 \cocoascreenfonts1{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 \pard\tx2051\tx2707
@@ -3143,7 +3142,7 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2013-12-18 01:41:58 +0000</string>
+	<string>2014-01-01 08:09:03 +0000</string>
 	<key>Modifier</key>
 	<string>Cuthbert, Dave</string>
 	<key>NotesVisible</key>
@@ -3161,6 +3160,11 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 			<string>float</string>
 			<string>36</string>
 		</array>
+		<key>NSHorizonalPagination</key>
+		<array>
+			<string>coded</string>
+			<string>BAtzdHJlYW10eXBlZIHoA4QBQISEhAhOU051bWJlcgCEhAdOU1ZhbHVlAISECE5TT2JqZWN0AIWEASqEhAFxlwCG</string>
+		</array>
 		<key>NSLeftMargin</key>
 		<array>
 			<string>float</string>
@@ -3169,12 +3173,27 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 		<key>NSPaperName</key>
 		<array>
 			<string>string</string>
-			<string>11x17</string>
+			<string>tabloid</string>
 		</array>
 		<key>NSPaperSize</key>
 		<array>
 			<string>size</string>
 			<string>{792, 1224}</string>
+		</array>
+		<key>NSPrintReverseOrientation</key>
+		<array>
+			<string>int</string>
+			<string>0</string>
+		</array>
+		<key>NSPrinter</key>
+		<array>
+			<string>coded</string>
+			<string>BAtzdHJlYW10eXBlZIHoA4QBQISEhAlOU1ByaW50ZXIAhIQITlNPYmplY3QAhZKEhIQITlNTdHJpbmcBlIQBKwEghoY=</string>
+		</array>
+		<key>NSPrinterName</key>
+		<array>
+			<string>string</string>
+			<string> </string>
 		</array>
 		<key>NSRightMargin</key>
 		<array>
@@ -3219,7 +3238,7 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 			</dict>
 		</array>
 		<key>Frame</key>
-		<string>{{52, 0}, {1388, 878}}</string>
+		<string>{{53, 0}, {1387, 878}}</string>
 		<key>ListView</key>
 		<true/>
 		<key>OutlineWidth</key>
@@ -3233,7 +3252,7 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 		<key>SidebarWidth</key>
 		<integer>120</integer>
 		<key>VisibleRegion</key>
-		<string>{{12.121211639558446, 9.848484457141236}, {1030.302989362468, 536.36361505046125}}</string>
+		<string>{{0.75757572747240298, 0}, {1040.1514738196095, 559.84846260210588}}</string>
 		<key>Zoom</key>
 		<real>1.3200000524520874</real>
 		<key>ZoomValues</key>

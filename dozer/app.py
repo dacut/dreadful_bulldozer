@@ -5,7 +5,8 @@ from datetime import datetime
 import dozer.dao as dao
 import dozer.filesystem as fs
 import dozer.jsonrpc as jsonrpc
-from dozer.session import LoginDeniedError
+from dozer.exception import (
+    FileNotFoundError, LoginDeniedError, PermissionDeniedError)
 from functools import partial
 from httplib import METHOD_NOT_ALLOWED
 from logging import getLogger
@@ -24,13 +25,20 @@ log = getLogger("dozer.app")
 class DozerAPI(object):
     @jsonrpc.expose
     def create_folder(self, node_name=None, inherit_permissions=True):
-        return fs.make_folder(folder_name=node_name,
-                              inherit_permissions=inherit_permissions)
+        return fs.create_folder(folder_name=node_name,
+                                inherit_permissions=inherit_permissions)
 
     @jsonrpc.expose
     def create_notepage(self, node_name=None, inherit_permissions=True):
-        return fs.make_notepage(notepage_name=node_name,
-                                inherit_permissions=inherit_permissions)
+        return fs.create_notepage(notepage_name=node_name,
+                                  inherit_permissions=inherit_permissions)
+
+    @jsonrpc.expose
+    def create_note(self, notepage_name=None, x_pos_um=None, y_pos_um=None,
+                    width_um=None, height_um=None):
+        return fs.create_note(
+            notepage_name=notepage_name, x_pos_um=x_pos_um, y_pos_um=y_pos_um,
+            width_um=width_um, height_um=height_um)
 
     @jsonrpc.expose
     def list_folder(self, node_name=None):
@@ -119,9 +127,9 @@ class DreadfulBulldozer(object):
 
         try:
             node = fs.get_node("/" + "/".join(args))
-        except fs.FileNotFoundError as e:
+        except FileNotFoundError as e:
             raise cherrypy.HTTPError(404, str(e))
-        except fs.PermissionDeniedError as e:
+        except PermissionDeniedError as e:
             raise cherrypy.HTTPError(403, str(e))
 
         if isinstance(node, fs.Folder):
@@ -132,8 +140,8 @@ class DreadfulBulldozer(object):
             template = "note.html"
 
         page = Template(filename=self.template_dir + "/" + template,
-                            lookup=self.template_lookup,
-                            strict_undefined=True)
+                        lookup=self.template_lookup,
+                        strict_undefined=True)
         response.headers['Content-Type'] = "text/html"
         return page.render(app=self, node=node)
 

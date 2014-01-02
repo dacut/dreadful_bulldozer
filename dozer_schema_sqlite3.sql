@@ -174,13 +174,14 @@ ON dz_notepage_revisions(node_id, previous_revision_id_sha256);
 -- Notes ---------------------------------------------------------------------
 CREATE TABLE dz_notes(
     node_id INTEGER PRIMARY KEY NOT NULL,
-    on_top_of_node_id INTEGER,
     contents_markdown TEXT,
     contents_hash_sha256 CHAR(64),
     x_pos_um INTEGER NOT NULL,
     y_pos_um INTEGER NOT NULL,
-    FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id),
-    FOREIGN KEY (on_top_of_node_id) REFERENCES dz_notes(node_id));
+    width_um INTEGER NOT NULL,
+    height_um INTEGER NOT NULL,
+    z_index INTEGER NOT NULL,
+    FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id));
 
 CREATE TABLE dz_note_hashtags(
     node_id INTEGER NOT NULL,

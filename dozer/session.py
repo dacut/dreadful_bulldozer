@@ -3,6 +3,7 @@ from base64 import b64decode, b64encode
 import cherrypy
 from cherrypy._cptools import Tool
 from datetime import datetime
+from dozer.exception import LoginDeniedError
 import dozer.dao as dao
 import hashlib
 import hmac
@@ -13,9 +14,6 @@ from struct import pack, unpack
 from passlib.hash import pbkdf2_sha512
 
 log = getLogger("dozer.session")
-
-class LoginDeniedError(RuntimeError):
-    pass
 
 class UserSessionTool(Tool):
     """\

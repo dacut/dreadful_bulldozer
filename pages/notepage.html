@@ -1,91 +1,97 @@
 <%!
 import cherrypy
 import dozer.dao as dao
-from pprint import pformat
+import dozer.filesystem as fs
+from dozer.jsonrpc import to_json
+%><%page args="app, node" /><%
+hierarchy = node.hierarchy
 
-COLUMNS = 4
-%>
-<%
-document_path_elements = document.full_name.split("/")
-%>
+# Only display up to 5 path elements
+if len(hierarchy) <= 5:
+    displayed_hierarchy = hierarchy
+else:
+    displayed_hierarchy = [hierarchy[0], None] + hierarchy[-4:]
+
+# Default to 100% zoom level.  Unfortunately, we don't have the actual screen
+# dimensions; we assume a 1900x1080 display on a 15 inch laptop screen.  That's
+# 2185.5 pixels over 381000 um, which works out to the number below.
+pixels_per_um = 0.00573490813648294
+%>\
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>${document.full_name | h} - Dreadful Bulldozer</title>
-    <link type="text/css" rel="stylesheet"
-          href="/bootstrap/css/bootstrap.min.css" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <!-- link rel="shortcut icon" href="../../docs-assets/ico/favicon.png" -->
+    <title>${node.full_name | h}</title>
+    <link href="/static/bootstrap.css" rel="stylesheet">
+    <link href="/static/notepage.css" rel="stylesheet">
     <script type="text/javascript"><!--
-% if document.document_type == "notepage":
-dz_document = ${dao.JSONObjectEncoder().encode(document)};
-% endif
+window.node = ${to_json(node)};
+window.node_contents = ${to_json(node.children)};
+window.pixels_per_um = ${pixels_per_um};
 --></script>
   </head>
-  <body class="components">
-    <nav class="navbar">
-      <div class="navbar-inner">
-        <a class="brand" href="#">Dreadful Bulldozer</a>
-        <ul class="nav">
-          <li><a href="/">Home</a></li>
-        </ul>
-      </div>
-    </nav>
-    <section>
-      <div class="container-fluid">
-        <ul class="breadcrumb">
-% for i, doc in enumerate(document_path_elements):
-          <li><a href="/notepage/${"/".join(document_path_elements[:i+1]) | h}">\
-${doc.document_name if i > 0 else "root"|h}</a>\
-%     if i < len(document_path_elements) - 1:
- <span class="divider">/</span>\
+  <body>
+<%include file="/navbar.html" args="active_target='browse'" />
+    <div class="container" style="width: 100%;">
+      <ol class="breadcrumb">
+% for h in displayed_hierarchy:
+<% name = h.name if h.node_id != 0 else "[root]" %>\
+%     if h is None:
+        <li>...</li>
+%     elif h is node:
+        <li class="active">${name | h}</li>
+%     else:
+        <li><a href="/files${h.full_name | h}">${name | h}</a></li>
 %     endif
-</li>
 % endfor
-        </ul>
-        <div class="row-fluid clearfix">
-          <div class="span2">
-            <div class="well">
-% if document.document_type == "notepage":
-<%include file="/sidebar_notepage.html" />\
-% elif document.document_type == "folder":
-<%include file="/sidebar_folder.html" />\
-% endif
-            </div>
-          </div>
-          <div class="span10">
-% if document.document_type == "folder":
-            <div class="well">
+      </ol>
+      <div class="row">
+        <div class="col-md-10 col-xs-12">
+          <div id="viewport">
+% if node.access(fs.PERM_READ_DOCUMENT):
+%     for note in node.children:
 <%
-children = document.children
-children.sort(key=lambda child: (child.document_type, child.document_name))
-%>
-              <table width="100%">
-                <tbody>
-%     for i, child in enumerate(children):
-%         if i == 0:
-                  <tr>
-%         elif i % COLUMNS == 0:
-</tr>
-                  <tr>
-%         endif
-                    <td>\
-<a href="/notepage${child.full_name | h}">${child.document_name | h}\
-${"/" if child.document_type == "folder" else ""}</a></td>
+          domId = "note-%d" % note.node_id
+          style = ("width: %dpx; height: %dpx; left: %dpx; top: %dpx; "
+                   "z-index: %d;" % (
+                   int(note.width_um * pixels_per_um),
+                   int(note.height_um * pixels_per_um),
+                   int(note.x_pos_um * pixels_per_um),
+                   int(note.y_pos_um * pixels_per_um),
+                   note.z_index))
+%>\
+            <div class="note" id="${domId}" style="${style}">${note.contents_markdown|h}</div>
 %     endfor
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-% else:
 % endif
           </div>
         </div>
-      </div>
-    </section>
-    <script src="/jquery/jquery.min.js"></script>
-    <script src="/bootstrap/js/bootstrap.min.js"></script>
-% if document.document_type == "notepage":
-    <script src="/static/notepage.js"></script>
+        <div class="col-md-2 hidden-sm hidden-xs">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h3 class="panel-title">Actions</h3>
+            </div>
+            <div class="panel-body">
+% if node.access(fs.PERM_EDIT_DOCUMENT):
+              <a href="#" id="createNoteAction">Create note</a><br>
+% else:
+              <span class="disabled"><abbr title="You do not have permissions to create folders in this folder">Create note</abbr></span><br>
 % endif
+              <a href="#" id="refreshNotepageAction">Refresh</a><br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/static/jquery-1.10.2.min.js"></script>
+    <script src="/static/bootstrap.min.js"></script>
+    <script src="/static/json2.js"></script>
+    <script src="/static/dozerapi.js"></script>
+    <script src="/static/notepage.js"></script>
   </body>
 </html>
 
