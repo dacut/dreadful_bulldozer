@@ -32,48 +32,72 @@ jQuery(function($) {
         domNode.text(note.contents_markdown);
 
         domNode.mousedown(onNoteMouseDown);
-        domNode.mouseup(onNoteMouseUp);
-        domNode.mousemove(onNoteMouseMove);
-        domNode.mouseleave(onNoteMouseLeave);
     }
 
+    function stopDragging() {
+        // Stop any drag operation currently in progress.
+        // FIXME: Need to update the server with the new note position.
+        var viewport = $("#viewport");
+        viewport.removeData("drag-target");
+        viewport.removeData("drag-last-x");
+        viewport.removeData("drag-last-y");
+    }
+    
     function onNoteMouseDown(e) {
-        var target = $(e.target);
+        // Handle a mousedown event on a note.  This starts dragging the note.
+        var target = $(e.target), viewport = $("#viewport");
         if (e.button === 0) {
-            target.data("dragging", [e.clientX, e.clientY]);
+            console.log("mousedown: " + target.attr("id"));
+            viewport.data("drag-target", target.attr("id"));
+            viewport.data("drag-last-x", e.clientX);
+            viewport.data("drag-last-y", e.clientY);
         }
     }
 
-    function onNoteMouseUp(e) {
-        var target = $(e.target);
-        if (e.button === 0) {
-            target.removeData("dragging");
+    function onViewportMouseMove(e) {
+        // Handle a mouse motion event on the viewport.  If a drag event is in
+        // progress, this updates the position of the note on the viewport.
+        var viewport = $("#viewport"),
+            targetId = viewport.data("drag-target"),
+            target, lastX, lastY, deltaX, deltaY, left, top;
+
+        if (e.which != 1) {
+            // Mouse button was released, but we didn't receive the mouseup
+            // event (pointer outside of window).  Go ahead and release the
+            // drag now.
+            stopDragging();
+            return;
         }
-    }
 
-    function onNoteMouseLeave(e) {
-        var target = $(e.target);
-        target.removeData("dragging");
-    }
+        if (targetId !== undefined && targetId !== null) {
+            target = $("#" + targetId);
 
-    function onNoteMouseMove(e) {
-        var target = $(e.target);
-        var start = target.data("dragging");
-        var curLeft, curTop, newLeft, newTop;
+            console.log("mousemove: drag-target=" + targetId + " button=" + e.button + " which=" + e.which);
 
-        if (start) {
-            curLeft = target.css('left');
-            curTop = target.css('top');
-            curLeft = Number(curLeft.substring(0, curLeft.length - 2));
-            curTop = Number(curTop.substring(0, curTop.length - 2));
-            var newLeft = curLeft + e.clientX - start[0];
-            var newTop = curTop + e.clientY - start[1];
+            lastX = viewport.data("drag-last-x");
+            lastY = viewport.data("drag-last-y");
 
-            console.log("dragging: clientX=" + e.clientX + ", clientY=" + e.clientY + ", target.left=" + target.css('left') + ", target.top=" + target.css('top') + ", start=" + start[0] + "," + start[1] + ", target.position=" + target.css('position') + ", new=" + newLeft + "," + newTop);
+            // Delta is the difference between the current position in the
+            // client window and the last reported position.
+            deltaX = e.clientX - lastX;
+            deltaY = e.clientY - lastY;
 
-            target.css("left", newLeft);
-            target.css("top", newTop);
-            target.data("dragging", [e.clientX, e.clientY]);
+            // Get the position of the target and remove the 'px' suffix.
+            left = target.css('left');
+            top = target.css('top');
+            left = Number(left.substring(0, left.length - 2));
+            top = Number(top.substring(0, top.length - 2));
+            
+            // Modify the position by the delta.
+            left += deltaX;
+            top += deltaY;
+
+            target.css("left", left);
+            target.css("top", top);
+
+            // Remember the last reported position.
+            viewport.data("drag-last-x", e.clientX);
+            viewport.data("drag-last-y", e.clientY);
         }
     }
 
@@ -81,6 +105,10 @@ jQuery(function($) {
         console.log("create note clicked");
         dozer.create_note(node.full_name, onCreateNoteSuccess, null);
     });
+
+    $("#viewport").mousemove(onViewportMouseMove);
+    $(window).mouseup(stopDragging);
+    $(window).on("blur", stopDragging);
 
     (function () {
         for (var i = 0; i < node_contents.length; ++i) {
