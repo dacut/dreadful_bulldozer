@@ -32,6 +32,7 @@ jQuery(function($) {
         domNode.text(note.contents_markdown);
 
         domNode.mousedown(onNoteMouseDown);
+        domNode.dblclick(onNoteDoubleClick);
     }
 
     function stopDragging() {
@@ -46,12 +47,84 @@ jQuery(function($) {
     function onNoteMouseDown(e) {
         // Handle a mousedown event on a note.  This starts dragging the note.
         var target = $(e.target), viewport = $("#viewport");
-        if (e.button === 0) {
+
+        if (e.button === 0 && e.target === e.currentTarget) {
             console.log("mousedown: " + target.attr("id"));
             viewport.data("drag-target", target.attr("id"));
             viewport.data("drag-last-x", e.clientX);
             viewport.data("drag-last-y", e.clientY);
+
+            // Don't let this event bubble.
+            return false;
         }
+    }
+
+    function onNoteDoubleClick(e) {
+        // Handle a double-click event on a note.  This starts editing the
+        // note.
+        var target = $(e.target), form, text, editor;
+        console.log("double click: " + target.attr("id"));
+        text = target.text();
+        target.data("orig-text", text);
+        target.text("");
+
+        // Create an edit form in the interior.
+        form = $('<form><textarea id="note-edit" cols="132" rows="60">' +
+                 '</textarea></form>');
+        form.appendTo(target);
+        
+        editor = $("#note-edit", form);
+        editor.text(text);
+        editor.keypress(onNoteEditKeypress);
+
+        // Don't let this event bubble.
+        return false;
+    }
+
+    function onNoteEditKeypress(e) {
+        var target = $(e.target),
+            note = target.parents(".note"),
+            noteId = note.attr("id"),
+            text;
+
+        console.log("keypress: noteId=" + noteId + ", which=" + e.which + " meta=" + e.metaKey + " altkey=" + e.altKey);
+
+        // Convert noteId into a numeric form.
+        if (noteId.substring(0, 5) !== "note-") {
+            // Yikes -- this shouldn't happen.
+            console.log("Failed to convert note div into a numeric node it: " +
+                        noteId);
+            return true;
+        }
+
+        noteId = Number(noteId.substring(5));
+
+        if ((e.altKey || e.metaKey) && (e.which === 10 || e.which === 13) ||
+            e.which == 27)
+        {
+            // Done editing this box.  If Meta+Enter was pressed (which != 27),
+            // save the changes.
+            if (e.which !== 27) {
+                text = target.val();
+
+                // FIXME: Convert the text into Markdown.
+                // FIXME: Submit the text changes to the server.
+            } else {
+                // Restore the original text.
+                text = note.data("orig-text");
+                note.removeData("orig-text");
+            }
+             
+            // Remove the form.
+            target.parent().remove();
+
+            // Set the note text.
+            note.text(text);
+            return false;
+        }
+
+        // Normal key; ignore it, let it bubble up.
+        return true;
     }
 
     function onViewportMouseMove(e) {
