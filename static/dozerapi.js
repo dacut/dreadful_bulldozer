@@ -125,10 +125,7 @@ var dozer = (function () {
     return {
         create_folder: function (node_name, success, error) {
             if (typeof(node_name) != "string") {
-                throw {
-                    "name": "TypeError",
-                    "message": "node_name must be a string"
-                };
+                throw new TypeError("node_name must be a string");
             }
 
             jsonrpc_call("dozer.create_folder", {"node_name": node_name},
@@ -137,10 +134,7 @@ var dozer = (function () {
 
         create_notepage: function (node_name, success, error) {
             if (typeof(node_name) != "string") {
-                throw {
-                    "name": "TypeError",
-                    "message": "node_name must be a string"
-                };
+                throw new TypeError("node_name must be a string");
             }
 
             jsonrpc_call("dozer.create_notepage", {"node_name": node_name},
@@ -149,10 +143,7 @@ var dozer = (function () {
 
         create_note: function (notepage_name, success, error) {
             if (typeof(notepage_name) != "string") {
-                throw {
-                    "name": "TypeError",
-                    "message": "notepage_name must be a string"
-                };
+                throw new TypeError("notepage_name must be a string");
             }
 
             jsonrpc_call("dozer.create_note", {"notepage_name": notepage_name},
@@ -161,10 +152,7 @@ var dozer = (function () {
 
         list_folder: function (node_name, success, error) {
             if (typeof(node_name) != "string") {
-                throw {
-                    "name": "TypeError",
-                    "message": "node_name must be a string"
-                };
+                throw new TypeError("node_name must be a string");
             }
 
             jsonrpc_call("dozer.list_folder", {"node_name": node_name},
