@@ -1,38 +1,55 @@
 jQuery(function($) {
 
+    var edited_note = null;
+
     function onCreateNoteSuccess(id, note) {
         node_contents.push(note);
         drawNote(note);
     }
 
     function drawNote(note) {
-        var domId, domNode, viewport, style;
+        var domId, noteDOM, noteContentsDOM, viewport, style, converter;
 
         domId = "note-" + note.node_id;
-        domNode = $("#" + domId);
+        noteDOM = $("#" + domId);
         
-        if (domNode.length == 0) {
+        if (noteDOM.length == 0) {
             // New note; need to create it.
             viewport = $("#viewport");
-            $('<div class="note" id="' + domId + '"></div>').appendTo(viewport);
-            domNode = $("#" + domId);
+            $('<div class="note" id="' + domId + '">' +
+              '<div class="note-contents"></div>' +
+              '</div>').appendTo(viewport);
+            noteDOM = $("#" + domId);
+            noteDOM.data("note", note);
+            noteContentsDOM = $(".note-contents", noteDOM);
+
+            style = {'width': (0.001 * note.width_um) + "mm",
+                     'height': (0.001 * note.height_um) + "mm",
+                     'left': (0.001 * note.x_pos_um) + "mm",
+                     'top': (0.001 * note.y_pos_um) + "mm",
+                     'z-index': note.z_index}
+
+            noteDOM.css(style);
+            noteDOM.mousedown(onNoteMouseDown);
+            noteDOM.dblclick(onNoteDoubleClick);
+            noteContentsDOM.mousedown(onNoteMouseDown);
+        } else {
+            noteContentsDOM = $(".note-contents", noteDOM);
         }
 
-        style = {'width': (0.001 * note.width_um) + "mm",
-                 'height': (0.001 * note.height_um) + "mm",
-                 'left': (0.001 * note.x_pos_um) + "mm",
-                 'top': (0.001 * note.y_pos_um) + "mm",
-                 'z-index': note.z_index}
+        // Convert the raw text into HTML.
+        converter = Markdown.getSanitizingConverter();
+        noteContentsDOM.html(
+            converter.makeHtml(note.contents_markdown));
 
-        domNode.css(style);
+        // Make sure the contents are visible.
+        noteContentsDOM.css("display", "block");
+    }
 
-        console.log("Setting DOM css: " + JSON.stringify(style))
-
-        // FIXME: Need to render Markdown into HTML.
-        domNode.text(note.contents_markdown);
-
-        domNode.mousedown(onNoteMouseDown);
-        domNode.dblclick(onNoteDoubleClick);
+    function updateNote(note, text) {
+        // FIXME: Update the note contents on the server.
+        note.contents_markdown = text;
+        drawNote(note);
     }
 
     function stopDragging() {
@@ -46,11 +63,15 @@ jQuery(function($) {
     
     function onNoteMouseDown(e) {
         // Handle a mousedown event on a note.  This starts dragging the note.
-        var target = $(e.target), viewport = $("#viewport");
+        var noteDOM = $(e.target), viewport = $("#viewport");
+
+        if (! noteDOM.is(".note")) {
+            // Mouse down on an inner item; select the note div.
+            noteDOM = noteDOM.parents(".note");
+        }
 
         if (e.button === 0 && e.target === e.currentTarget) {
-            console.log("mousedown: " + target.attr("id"));
-            viewport.data("drag-target", target.attr("id"));
+            viewport.data("drag-target", noteDOM.attr("id"));
             viewport.data("drag-last-x", e.clientX);
             viewport.data("drag-last-y", e.clientY);
 
@@ -62,20 +83,34 @@ jQuery(function($) {
     function onNoteDoubleClick(e) {
         // Handle a double-click event on a note.  This starts editing the
         // note.
-        var target = $(e.target), form, text, editor;
-        console.log("double click: " + target.attr("id"));
-        text = target.text();
-        target.data("orig-text", text);
-        target.text("");
+        var noteDOM = $(e.target), form, editor;
+
+        if (! noteDOM.is(".note")) {
+            // Clicked on the contents div; set noteDOM to the enclosing
+            // note div.
+            noteDOM = noteDOM.parents(".note");
+        }
+
+        edited_note = noteDOM.data("note");
+        console.log("edited_note=" + JSON.stringify(edited_note));
+
+        // Remove the display-only contents while editing.
+        $(".note-contents", noteDOM).css("display", "none");
 
         // Create an edit form in the interior.
         form = $('<form><textarea id="note-edit" cols="132" rows="60">' +
                  '</textarea></form>');
-        form.appendTo(target);
-        
+        form.appendTo(noteDOM);
         editor = $("#note-edit", form);
-        editor.text(text);
+
+        // Populate the value of the note with the contents.
+        editor.text(edited_note.contents_markdown);
+
+        // Watch keypresses for Alt+Enter or Escape, which terminate the
+        // editing process.
         editor.keypress(onNoteEditKeypress);
+
+        editor.trigger("focus");
 
         // Don't let this event bubble.
         return false;
@@ -83,43 +118,28 @@ jQuery(function($) {
 
     function onNoteEditKeypress(e) {
         var target = $(e.target),
-            note = target.parents(".note"),
-            noteId = note.attr("id"),
             text;
 
-        console.log("keypress: noteId=" + noteId + ", which=" + e.which + " meta=" + e.metaKey + " altkey=" + e.altKey);
-
-        // Convert noteId into a numeric form.
-        if (noteId.substring(0, 5) !== "note-") {
-            // Yikes -- this shouldn't happen.
-            console.log("Failed to convert note div into a numeric node it: " +
-                        noteId);
-            return true;
+        if (e.which === 27) {
+            // Escape -- cancel editing.
+            drawNote(edited_note);
+            edited_note = null;
+            return false;
         }
 
-        noteId = Number(noteId.substring(5));
+        if ((e.altKey || e.metaKey) && (e.which === 10 || e.which === 13)) {
+            // Alt+Enter pressed -- save changes.
+            
+            // Get the text entered.
+            text = target.val();
 
-        if ((e.altKey || e.metaKey) && (e.which === 10 || e.which === 13) ||
-            e.which == 27)
-        {
-            // Done editing this box.  If Meta+Enter was pressed (which != 27),
-            // save the changes.
-            if (e.which !== 27) {
-                text = target.val();
-
-                // FIXME: Convert the text into Markdown.
-                // FIXME: Submit the text changes to the server.
-            } else {
-                // Restore the original text.
-                text = note.data("orig-text");
-                note.removeData("orig-text");
-            }
-             
             // Remove the form.
             target.parent().remove();
 
-            // Set the note text.
-            note.text(text);
+            // Update the note.
+            updateNote(edited_note, text);
+
+            edited_note = false;
             return false;
         }
 
@@ -127,7 +147,7 @@ jQuery(function($) {
         return true;
     }
 
-    function onViewportMouseMove(e) {
+    function onMouseMove(e) {
         // Handle a mouse motion event on the viewport.  If a drag event is in
         // progress, this updates the position of the note on the viewport.
         var viewport = $("#viewport"),
@@ -144,8 +164,6 @@ jQuery(function($) {
 
         if (targetId !== undefined && targetId !== null) {
             target = $("#" + targetId);
-
-            console.log("mousemove: drag-target=" + targetId + " button=" + e.button + " which=" + e.which);
 
             lastX = viewport.data("drag-last-x");
             lastY = viewport.data("drag-last-y");
@@ -179,7 +197,7 @@ jQuery(function($) {
         dozer.create_note(node.full_name, onCreateNoteSuccess, null);
     });
 
-    $("#viewport").mousemove(onViewportMouseMove);
+    $(window).mousemove(onMouseMove);
     $(window).mouseup(stopDragging);
     $(window).on("blur", stopDragging);
 
