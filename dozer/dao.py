@@ -503,6 +503,9 @@ class SessionNotepage(Base):
                         nullable=False)
     node_id = Column(Integer, nullable=False)
     revision_id_sha256 = Column(CHAR(64), nullable=False)
+    listener_ipv4 = Column(String(15), nullable=True)
+    listener_ipv6 = Column(String(45), nullable=True)
+    listener_port = Column(Integer, nullable=True)
 
     session = relationship("Session", backref="notepages")
     

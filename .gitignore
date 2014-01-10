@@ -9,3 +9,4 @@ static/bootstrap*
 static/glyphicons*
 static/jquery*
 static/json2.js
+static/Markdown.*

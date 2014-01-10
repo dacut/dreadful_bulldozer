@@ -211,9 +211,14 @@ CREATE TABLE dz_session_notepages(
     session_id CHAR(64) NOT NULL,
     node_id INTEGER NOT NULL,
     revision_id_sha256 CHAR(64) NOT NULL,
+    listener_ipv4 VARCHAR(15),
+    listener_ipv6 VARCHAR(45),
+    listener_port INTEGER,
     PRIMARY KEY (session_id, node_id),
     FOREIGN KEY (session_id) REFERENCES dz_sessions(session_id),
     FOREIGN KEY (node_id, revision_id_sha256)
       REFERENCES dz_notepage_revisions(node_id, revision_id_sha256));
+CREATE INDEX i_dz_sessnp_node_id
+ON dz_session_notpages(node_id);
 
 COMMIT;
