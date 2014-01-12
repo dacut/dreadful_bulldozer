@@ -81,24 +81,24 @@ jQuery(function($) {
             target = encodePathComponents(node.path_components);
 
             if (nodeClass === "Folder") {
-                icon = "glyphicons_144_folder_open.png";
+                icon = "glyphicon-folder-open";
                 target += "/";
             } else if (nodeClass === "Notepage") {
-                icon = "glyphicons_039_notes.png";
+                icon = "glyphicon-list-alt";
             } else if (nodeClass === "Note") {
-                icon = "glyphicons_309_comments.png";
+                icon = "glyphicon-comment";
             } else {
                 nodeClass = "Unknown";
-                icon = "glyphicons_036_file.png";
+                icon = "glyphicon-file";
             }
 
             var row = ('<tr class="folderEntry">' +
                        '<td valign="center">' +
                        '<span class="dropdown">' +
-                       '<a data-toggle="dropdown" href="#" id="fileMenu' + i
-                       + '">' +
-                       '<img src="/static/glyphicons/glyphicons_halflings_' +
-                       '113_chevron-down.png" width="9px" height="6px">' +
+                       '<a data-toggle="dropdown" href="#" id="fileMenu' + i +
+                       '">' +
+                       '<span class="glyphicon glyphicon-cog">' +
+                       '</span>' +
                        '</a>' +
                        '<ul class="dropdown-menu" role="menu" ' +
                        'aria-labelledby="fileMenu' + i + '">' +
@@ -113,8 +113,7 @@ jQuery(function($) {
                        '</li>' +
                        '</ul></span>' +
                        '&nbsp;&nbsp;' +
-                       '<img src="/static/glyphicons/' + icon +
-                       '" width="18px" height="13px">' +
+                       '<span class="glyphicon ' + icon + '"></span>' +
                        '</td>' +
                        '<td valign="center">' +
                        '<a href="/files' +
