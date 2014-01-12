@@ -157,6 +157,16 @@ var dozer = (function () {
 
             jsonrpc_call("dozer.list_folder", {"node_name": node_name},
                          success, error);
+        },
+
+        update_notepage: function (notepage_id, updates, success, error) {
+            if (typeof(notepage_id) != "number") {
+                throw new TypeError("notepage_id must be a string");
+            }
+
+            jsonrpc_call("dozer.update_notepage", {
+                "notepage_id": notepage_id,
+                "updates": updates}, success, error);
         }
     }
 }());

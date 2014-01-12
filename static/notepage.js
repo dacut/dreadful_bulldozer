@@ -7,6 +7,14 @@ jQuery(function($) {
         drawNote(note);
     }
 
+    function onUpdateNotepageSuccess(id) {
+        console.log("Successful update");
+    }
+
+    function onUpdateNotepageError(id) {
+        console.log("Failed update");
+    }
+
     function drawNote(note) {
         var domId, noteDOM, noteContentsDOM, viewport, style, converter;
 
@@ -23,10 +31,10 @@ jQuery(function($) {
             noteDOM.data("note", note);
             noteContentsDOM = $(".note-contents", noteDOM);
 
-            style = {'width': (0.001 * note.width_um) + "mm",
-                     'height': (0.001 * note.height_um) + "mm",
-                     'left': (0.001 * note.x_pos_um) + "mm",
-                     'top': (0.001 * note.y_pos_um) + "mm",
+            style = {'width': (0.001 * note.size_um[0]) + "mm",
+                     'height': (0.001 * note.size_um[1]) + "mm",
+                     'left': (0.001 * note.pos_um[0]) + "mm",
+                     'top': (0.001 * note.pos_um[1]) + "mm",
                      'z-index': note.z_index}
 
             noteDOM.css(style);
@@ -54,13 +62,33 @@ jQuery(function($) {
 
     function stopDragging() {
         // Stop any drag operation currently in progress.
-        // FIXME: Need to update the server with the new note position.
         var viewport = $("#viewport");
+        var targetId = viewport.data("drag-target");
+        var target, note, pos_um;
+
+        if (targetId === undefined) {
+            // Nothing being dragged.
+            return;
+        }
+
+        target = $("#" + targetId);
+        note = target.data('note');
+        pos_um = getNotePositionInMicrons(target);
         viewport.removeData("drag-target");
         viewport.removeData("drag-last-x");
         viewport.removeData("drag-last-y");
+
+        // Update the server with the new note position.
+        dozer.update_notepage(
+            node.node_id,
+            [{"action": "edit_note",
+              "note_id": note.node_id,
+              "revision_id": note.revision_id,
+              "pos_um": pos_um}],
+            onUpdateNotepageSuccess,
+            onUpdateNotepageError);
     }
-    
+
     function onNoteMouseDown(e) {
         // Handle a mousedown event on a note.  This starts dragging the note.
         var noteDOM = $(e.target), viewport = $("#viewport");
@@ -150,11 +178,11 @@ jQuery(function($) {
     function onMouseMove(e) {
         // Handle a mouse motion event on the viewport.  If a drag event is in
         // progress, this updates the position of the note on the viewport.
-        var viewport = $("#viewport"),
-            targetId = viewport.data("drag-target"),
-            target, lastX, lastY, deltaX, deltaY, left, top;
+        var viewport = $("#viewport");
+        var targetId = viewport.data("drag-target");
+        var target, lastX, lastY, deltaX, deltaY, left, top;
 
-        if (e.which != 1) {
+        if (e.which != 1 && targetId !== undefined && targetId !== null) {
             // Mouse button was released, but we didn't receive the mouseup
             // event (pointer outside of window).  Go ahead and release the
             // drag now.
@@ -190,6 +218,65 @@ jQuery(function($) {
             viewport.data("drag-last-x", e.clientX);
             viewport.data("drag-last-y", e.clientY);
         }
+    }
+
+    function getPixelsPerMicron() {
+        var sizetest = $('<div id="sizetest" style="position: relative; ' +
+                         'width: 100mm; height: 100mm; ' +
+                         'left: -200mm; top: -200mm;"></div>');
+        var width, height;
+        
+        // Create a dummy div that's 100mm x 100mm and see how many pixels
+        // that takes up.  Using a div that's too small results in significant
+        // rounding errors.
+
+        sizetest.appendTo("#viewport")
+        width = $("#sizetest").css("width");
+        height = $("#sizetest").css("height");
+
+        console.log("width=" + width);
+
+        width = Number(width.substring(0, width.length - 2));
+        height = Number(height.substring(0, height.length - 2));
+
+        // Remove our dummy div.
+        $("#sizetest").remove();
+
+        // We need to scale by 1e-5 to go from hundreds of mm to microns.
+        return [1e-5 * width, 1e-5 * height];
+    }
+
+    function getNoteSizeInMicrons(noteDOM, pixelsPerMicron) {
+        var width = noteDOM.css("width");
+        var height = noteDOM.css("height");
+
+        if (pixelsPerMicron === undefined || pixelsPerMicron === null) {
+            pixelsPerMicron = getPixelsPerMicron();
+        }
+        
+        width = Number(width.substring(0, width.length - 2));
+        height = Number(height.substring(0, height.length - 2));
+        
+        return [width / pixelsPerMicron[0], height / pixelsPerMicron[1]];
+    }
+    
+    function getNotePositionInMicrons(noteDOM, pixelsPerMicron) {
+        var left = noteDOM.css("left");
+        var top = noteDOM.css("top");
+
+        if (left === undefined || top === undefined) {
+            console.log("Failed to retrieve style information");
+            return;
+        }
+
+        if (pixelsPerMicron === undefined || pixelsPerMicron === null) {
+            pixelsPerMicron = getPixelsPerMicron();
+        }
+        
+        left = Number(left.substring(0, left.length - 2));
+        top = Number(top.substring(0, top.length - 2));
+        
+        return [left / pixelsPerMicron[0], top / pixelsPerMicron[1]];
     }
 
     $("#createNoteAction").click(function () {

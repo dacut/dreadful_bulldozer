@@ -35,7 +35,11 @@ def to_json_default(obj):
     try:
         return obj.json
     except AttributeError:
+        log.error("to_json_default: serialization failed", exc_info=True)
         raise TypeError("Cannot serialize %r" % (obj,))
+    except:
+        log.error("to_json_default: serialization failed", exc_info=True)
+        raise
 
 def to_json(obj):
     return json.dumps(obj, default=to_json_default)

@@ -6,7 +6,8 @@ import dozer.dao as dao
 import dozer.filesystem as fs
 import dozer.jsonrpc as jsonrpc
 from dozer.exception import (
-    FileNotFoundError, LoginDeniedError, PermissionDeniedError)
+    FileNotFoundError, InvalidParameterError, LoginDeniedError,
+    PermissionDeniedError)
 from functools import partial
 from httplib import METHOD_NOT_ALLOWED
 from logging import getLogger
@@ -34,11 +35,83 @@ class DozerAPI(object):
                                   inherit_permissions=inherit_permissions)
 
     @jsonrpc.expose
-    def create_note(self, notepage_name=None, x_pos_um=None, y_pos_um=None,
-                    width_um=None, height_um=None):
+    def create_note(self, notepage_name=None, pos_um=None, size_um=None):
         return fs.create_note(
-            notepage_name=notepage_name, x_pos_um=x_pos_um, y_pos_um=y_pos_um,
-            width_um=width_um, height_um=height_um)
+            notepage_name=notepage_name, pos_um=pos_um, size_um=size_um)
+
+    @jsonrpc.expose
+    def update_notepage(self, notepage_id=None, updates=None):
+        if not isinstance(updates, (list, tuple)):
+            raise InvalidParameterError(
+                "updates must be a list of update objects")
+
+        notepage = fs.FilesystemNode.get_node_by_id(notepage_id)
+        if not isinstance(notepage, fs.Notepage):
+            raise InvalidParameterError(
+                "notepage_id %r does not refer to a notepage", notepage_id)
+
+        # Remember the notepage's original revision_id
+        old_rev = notepage.revision_id
+        
+        # Running change log.
+        changes = []
+
+        for uid, u in enumerate(updates):
+            action = u.get('action')
+            if action is None:
+                raise InvalidParameterError(
+                    "update %d does not have an action", uid)
+            
+            change = {}
+            
+            if action == "edit_note":
+                note_id = u.get('note_id')
+                if note_id is None:
+                    raise InvalidParameterError(
+                        "update %d action edit_note does not have a note_id",
+                        uid)
+                
+                revision_id = u.get('revision_id')
+                if revision_id is None:
+                    raise InvalidParameterError(
+                        "update %d action edit_note does not have a "
+                        "revision_id", uid)
+                
+                note = fs.FilesystemNode.get_node_by_id(note_id)
+                if not isinstance(note, fs.Note):
+                    raise InvalidParameterError(
+                        "update %d action edit_note node_id %d does not refer "
+                        "to a note", uid, note_id)
+
+                change['action'] = 'edit_note'
+                change['note_id'] = note_id
+                
+                pos_um = u.get('pos_um')
+                if pos_um is not None:
+                    change['pos_um'] = [note.pos_um, pos_um]
+                    note.pos_um = pos_um
+
+                size_um = u.get('size_um')
+                if size_um is not None:
+                    change['size_um'] = [note.size_um, size_um]
+                    note.size_um = size_um
+
+                z_index = u.get('z_index')
+                if z_index is not None:
+                    change['z_index'] = [note.z_index, z_index]
+                    note.z_index = z_index
+
+                contents_markdown = u.get('contents_markdown')
+                if contents_markdown is not None:
+                    change['contents_markdown'] = [
+                        note.contents_markdown, contents_markdown]
+                    note.contents_markdown = contents_markdown
+
+                note.update()
+                changes.append(change)
+        
+        notepage.update(changes)
+        return {'revision_id': notepage.revision_id}
 
     @jsonrpc.expose
     def list_folder(self, node_name=None):
@@ -144,22 +217,6 @@ class DreadfulBulldozer(object):
                         strict_undefined=True)
         response.headers['Content-Type'] = "text/html"
         return page.render(app=self, node=node)
-
-    @cherrypy.expose
-    def create(self, *args, **kw):
-        if cherrypy.serving.request.method not in ("POST", "PUT"):
-            raise cherrypy.HTTPError(405)
-
-        document = dao.create_temp_document(
-            cherrypy.serving.request.db_session,
-            dao.Entity("dozer_user", "dacut"))
-
-        cherrypy.serving.request.db_session.commit()
-        
-        raise cherrypy.HTTPRedirect(
-            "/notepage" + document.full_name, 302)
-
-        return ""
 
     @cherrypy.expose
     def notepage(self, *args, **kw):

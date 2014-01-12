@@ -1,4 +1,6 @@
 from __future__ import absolute_import, with_statement
+from cStringIO import StringIO
+from datetime import datetime
 import dozer.dao as dao
 from dozer.exception import (
     FileNotFoundError, FilesystemConsistencyError, InvalidParameterError,
@@ -51,7 +53,7 @@ Returns the root folder in the filesystem.
 
 def get_node(path):
     """\
-get_node(path[, session]) -> FilesystemNode
+get_node(path) -> FilesystemNode
 
 Retrieves the node with the specified path name.
 
@@ -141,11 +143,9 @@ the new notepage will inherit permissions from its parent.
     return parent.create_notepage(
         filename, inherit_permissions=inherit_permissions)
 
-def create_note(notepage_name, x_pos_um=None, y_pos_um=None, width_um=None,
-                height_um=None):
+def create_note(notepage_name, pos_um=None, size_um=None):
     """\
-create_note(notepage_name, x_pos_um=None, y_pos_um=None, width_um=None,
-            height_um=None) -> Note
+create_note(notepage_name, pos_um=None, size_um=None) -> Note
 
 Create a note for the specified notepage.
 """
@@ -158,8 +158,7 @@ Create a note for the specified notepage.
         raise InvalidParameterError("Node is not a notepage: %r" %
                                     notepage_name)
     
-    return notepage.create_note(x_pos_um=x_pos_um, y_pos_um=y_pos_um,
-                                width_um=width_um, height_um=height_um)
+    return notepage.create_note(pos_um=pos_um, size_um=size_um)
 
 context = threading.local()
 
@@ -216,6 +215,16 @@ Finds the ids of the user plus all of the groups the user belongs to
     result.add(ALL_USERS_GROUP_ID)
 
     return result
+
+def _nvl(x, y):
+    return x if x is not None else y
+
+def _hash_xor(hash1, hash2):
+    result = StringIO()
+    for i in xrange(32):
+        result.write(chr(ord(hash1[i]) ^ ord(hash2[i])))
+
+    return result.getvalue()
 
 class FilesystemNode(object):
     def __init__(self, dao, **kw):
@@ -339,20 +348,6 @@ indicating the desired mode:
     def __hash__(self):
         return hash(self.full_name)
 
-    @staticmethod
-    def _from_dao(node, **kw):
-        if node.node_type_id == dao.NODE_TYPE_ID_FOLDER:
-            cls = Folder
-        elif node.node_type_id == dao.NODE_TYPE_ID_NOTEPAGE:
-            cls = Notepage
-        elif node.node_type_id == dao.NODE_TYPE_ID_NOTE:
-            cls = Note
-        else:
-            raise FilesystemConsistencyError(
-                "Unknown node type id %d" % node.node_type_id)
-
-        return cls(dao=node, **kw)
-
     def _get_hierarchy(self, node):
         """\
 _get_hierarchy(node) -> [root, folder, folder, ..., node]
@@ -438,6 +433,84 @@ actions.
             'inherit_permissions': self.inherit_permissions,
         }
 
+    def _hash_display_prefs(self, hasher):
+        """\
+node._hash_display_prefs(hasher)
+
+Find all display preferences assigned to this filesystem node.  Sort them by
+hashtag, then pack them into a binary format and update the hash digest.
+"""
+        display_prefs = sorted(self._dao.display_prefs,
+                               key=lambda el: el.hashtag)
+        for dp in display_prefs:
+            hashtag = _nvl(dp.hashtag, "")
+            background_color = _nvl(dp.background_color, "")
+            font_family = _nvl(dp.font_family, "")
+            font_size_millipt = int(_nvl(dp.font_size_millipt, 0))
+            font_weight = _nvl(dp.font_weight, "")
+            font_slant = _nvl(dp.font_slant, "")
+            font_color = _nvl(dp.font_color, "")
+
+            hasher.update(pack("<isisisiisisis",
+                               len(hashtag), hashtag,
+                               len(background_color), background_color,
+                               len(font_family), font_family,
+                               font_size_millipt,
+                               len(font_weight), font_weight,
+                               len(font_slant), font_slant,
+                               len(font_color), font_color))
+        return
+
+    @staticmethod
+    def _from_dao(node, **kw):
+        if node.node_type_id == dao.NODE_TYPE_ID_FOLDER:
+            cls = Folder
+        elif node.node_type_id == dao.NODE_TYPE_ID_NOTEPAGE:
+            cls = Notepage
+        elif node.node_type_id == dao.NODE_TYPE_ID_NOTE:
+            cls = Note
+        else:
+            raise FilesystemConsistencyError(
+                "Unknown node type id %d" % node.node_type_id)
+
+        return cls(dao=node, **kw)
+
+    @staticmethod
+    def get_node_by_id(node_id):
+        """\
+get_node_by_id(node_id) -> FilesystemNode
+
+Retrieves the node with the specified node_id.
+
+The node must be accessible to the user -- that is, the parent folders must
+be accessible.
+"""
+        log = getLogger("dozer.filesystem.get_node_by_id")
+        session = _request_db_session()
+        log.debug("get_node_by_id(node_id=%r)", node_id)
+
+        if not isinstance(node_id, (int, long)):
+            log.error("node_id %r isn't a string", node_id)
+            raise InvalidParameterError("node_id must be an integer")
+
+        session = _request_db_session()
+        try:
+            node_dao = session.query(dao.Node).filter_by(
+                node_id=node_id, is_active=1).one()
+        except NoResultFound:
+            raise FileNotFoundError("No node with id %r found" % (node_id,))
+        
+        node = FilesystemNode._from_dao(node_dao)
+
+        # Make sure the node can be accessed.
+        for el in node.hierarchy[:-1]:
+            if not el.access(PERM_NAVIGATE):
+                raise PermissionDeniedError(
+                    "%s does not have permission to navigate folder %s" %
+                    (_request_username(), el.full_name))
+        
+        return node
+        
 class Folder(FilesystemNode):
     def create_subfolder(self, name, inherit_permissions=True,
                          owner_user_id=None):
@@ -525,22 +598,44 @@ to the current user).
         
         if owner_user_id is None:
             owner_user_id = _request_user_id()
-        
-        notepage_dao = dao.Notepage(node_type_id=dao.NODE_TYPE_ID_NOTEPAGE,
-                                    parent_node_id=self._dao.node_id,
-                                    node_name=name,
-                                    is_active=True,
-                                    inherit_permissions=inherit_permissions)
+
         session = _request_db_session()
+        now = datetime.utcnow()
+
+        # Create the notepage DAO and flush it to the database so we have a
+        # valid node_id to play with.
+        notepage_dao = dao.Notepage(
+            node_type_id=dao.NODE_TYPE_ID_NOTEPAGE,
+            parent_node_id=self._dao.node_id,
+            node_name=name,
+            is_active=True,
+            inherit_permissions=inherit_permissions,
+            snap_to_grid=False,
+            grid_x_um=None,
+            grid_y_um=None,
+            grid_x_subdivisions=None,
+            grid_y_subdivisions=None,
+            revision_id=0,
+            edit_time_utc=now)
         session.add(notepage_dao)
         session.flush()
 
-        ace = dao.AccessControlEntry(user_id=owner_user_id,
-                                     node_id=notepage_dao.node_id,
-                                     permissions=(PERM_ADMINISTRATE |
-                                                  PERM_READ_DOCUMENT |
-                                                  PERM_EDIT_DOCUMENT |
-                                                  PERM_DELETE_DOCUMENT))
+        # Create the base revision DAO.
+        notepage_rev_dao = dao.NotepageRevision(
+            node_id=notepage_dao.node_id,
+            revision_id=0,
+            delta_to_previous=None,
+            editor_user_id=owner_user_id,
+            edit_time_utc=now)
+        session.add(notepage_rev_dao)
+
+        # Create a default access control entry allowing the owner to
+        # administrate the notepage
+        ace = dao.AccessControlEntry(
+            user_id=owner_user_id,
+            node_id=notepage_dao.node_id,
+            permissions=(PERM_ADMINISTRATE | PERM_READ_DOCUMENT |
+                         PERM_EDIT_DOCUMENT | PERM_DELETE_DOCUMENT))
         session.add(ace)
         session.flush()
 
@@ -565,68 +660,109 @@ to the current user).
         return self._children
 
 class Notepage(FilesystemNode):
+    @property
+    def revision_id(self):
+        return self._dao.revision_id
+
+    @property
+    def snap_to_grid(self):
+        return self._dao.snap_to_grid
+
+    @property
+    def grid_um(self):
+        if self._dao.grid_x_um is None or self._dao.grid_y_um is None:
+            return None
+        else:
+            return (self._dao.grid_x_um, self._dao.grid_y_um)
+
+    @property
+    def grid_subdivisions(self):
+        if (self._dao.grid_x_subdivisions is None or
+            self._dao.grid_y_subdivisons is None):
+            return None
+        else:
+            return (self._dao.grid_x_subdivisions,
+                    self._dao.grid_y_subdivisions)
+
+    @property
+    def bounding_box(self):
+        """\
+Return a bounding box in the form (left, top, bottom, right) indicating the
+bounds, in um, of all notes in this notepage.
+"""
+        children = self.children
+        if len(children) == 0:
+            return (0, 0, 0, 0)
+
+        first_child = children[0]
+        pos = first_child.pos_um
+        size = first_child.size_um
+
+        left = pos_um[0]
+        top = y_pos_um[1]
+        right = left + size[0]
+        bottom = top + size[1]
+
+        for child in children[1:]:
+            pos = child.pos_um
+            size = child.size_um
+            if pos[0] < left:
+                left = pos[0]
+            if pos[1] < top:
+                top = pos[1]
+            if pos[0] + size[0] > right:
+                right = pos[0] + size[0]
+            if pos[1] + size[1] > bottom:
+                bottom = pos[1] + size[1]
+
+        return (left, top, bottom, right)
+
     def _to_json(self):
         d = super(Notepage, self)._to_json()
-        d['current_revision_id_sha256'] = self._dao.current_revision_id_sha256
-        d['snap_to_grid'] = self._dao.snap_to_grid
-        d['grid_x_um'] = self._dao.grid_x_um
-        d['grid_y_um'] = self._dao.grid_y_um
-        d['grid_x_subdivisions'] = self._dao.grid_x_subdivisions
-        d['grid_y_subdivisions'] = self._dao.grid_y_subdivisions
+        d['revision_id'] = self.revision_id
+        d['snap_to_grid'] = self.snap_to_grid
+        d['grid_um'] = self.grid_um
+        d['grid_subdivisions'] = self.grid_subdivisions
         d['guides'] = [{'orientation': g.orientation,
                         'position_um': g.position_um}
                        for g in self._dao.guides]
         return d
 
-    def create_note(self, x_pos_um=None, y_pos_um=None, width_um=None,
-                    height_um=None):
-        log.debug("notepage %r: create_note(x_pos_um=%r, y_pos_um=%r, "
-                  "width_um=%r, height_um=%r)", self.full_name, x_pos_um,
-                  y_pos_um, width_um, height_um)
+    def create_note(self, pos_um=None, size_um=None):
+        log.debug("notepage %r: create_note(pos_um=%r, size_um=%r)",
+                  self.full_name, pos_um, size_um)
 
-        if (x_pos_um is not None and
-            not isinstance(x_pos_um, (int, float, long))):
-            log.error("create_note: invalid x_pos_um value %r", x_pos_um)
-            raise InvalidParameterError("x_pos_um must be null or a number")
+        if not (pos_um is None or
+                (isinstance(pos_um, (list, tuple)) and
+                 len(pos_um) == 2 and
+                 isinstance(pos_um[0]), (int, float, long) and
+                 isinstance(pos_um[1]), (int, float, long))):
+            log.error("create_note: invalid pos_um value %r", pos_um)
+            raise InvalidParameterError("pos_um must be null or (left, top)")
 
-        if (y_pos_um is not None and
-            not isinstance(y_pos_um, (int, float, long))):
-            log.error("create_note: invalid x_pos_um value %r", x_pos_um)
-            raise InvalidParameterError("y_pos_um must be null or a number")
-
-        if (x_pos_um is None and y_pos_um is not None):
-            log.error("create_note: y_pos_um is not None when x_pos_um is "
-                      "None")
-            raise InvalidParameterError("y_pos_um must be null if x_pos_um is "
-                                        "null")
-        
-        if (x_pos_um is not None and y_pos_um is None):
-            log.error("create_note: x_pos_um is not None when y_pos_um is "
-                      "None")
-            raise InvalidParameterError("x_pos_um must be null if y_pos_um is "
-                                        "null")
-
-        if (width_um is not None and
-            not isinstance(width_um, (int, float, long))):
-            log.error("create_note: invalid width_um value %r", width_um)
-            raise InvalidParameterError("width_um must be null or a number")
-
-        if (height_um is not None and
-            not isinstance(height_um, (int, float, long))):
-            log.error("create_note: invalid height_um value %r", height_um)
-            raise InvalidParameterError("height_um must be null or a number")
+        if not (size_um is None or
+                (isinstance(size_um, (list, tuple)) and
+                 len(size_um) == 2 and
+                 isinstance(size_um[0]), (int, float, long) and
+                 isinstance(size_um[1]), (int, float, long))):
+            log.error("create_note: invalid size_um value %r", size_um)
+            raise InvalidParameterError(
+                "size_um must be null or (width, height)")
 
         if not self.access(PERM_EDIT_DOCUMENT):
             raise PermissionDeniedError("No permission to edit notepage %s" %
                                         notepage_name)
         
-        if width_um is None:
+        if size_um is None:
             width_um = DEFAULT_NOTE_WIDTH
-        if height_um is None:
             height_um = DEFAULT_NOTE_HEIGHT
+        else:
+            width_um, height_um = size_um
  
-        if x_pos_um is None or y_pos_um is None:
+        if pos_um is None:
             x_pos_um, y_pos_um = self._calculate_note_position()
+        else:
+            x_pos_um, y_pos_um = pos_um
 
         # The z-index will be one greater than all other note z-index values.
         try:
@@ -635,59 +771,53 @@ class Notepage(FilesystemNode):
             # No children
             z_index = 0
 
+        session = _request_db_session()
+        now = datetime.utcnow()
+
         # Use a random UUID for the name
         note_name = str(random_uuid())
-        note_dao = dao.Note(node_type_id=dao.NODE_TYPE_ID_NOTE,
-                            parent_node_id=self._dao.node_id,
-                            node_name=note_name,
-                            is_active=True,
-                            inherit_permissions=True,
-                            contents_markdown="",
-                            contents_hash_sha256=None,
-                            x_pos_um=0,
-                            y_pos_um=0,
-                            width_um=DEFAULT_NOTE_WIDTH,
-                            height_um=DEFAULT_NOTE_HEIGHT,
-                            z_index=z_index)
 
-        # We need to create the note object first without flushing the DAO
-        # so we can compute its hash.
+        # Create the DAO holding the note.
+        note_dao = dao.Note(
+            node_type_id=dao.NODE_TYPE_ID_NOTE,
+            parent_node_id=self._dao.node_id,
+            node_name=note_name,
+            is_active=True,
+            inherit_permissions=True,
+            contents_markdown="",
+            x_pos_um=x_pos_um,
+            y_pos_um=y_pos_um,
+            width_um=width_um,
+            height_um=height_um,
+            z_index=z_index,
+            revision_id=0)
+        session.add(note_dao)
+        session.flush()
         note = FilesystemNode._from_dao(note_dao, parent=self)
-        note.calculate_contents_hash_sha256()
 
-        # Now we add the DAO
-        note.write()
+        # Mark that a change was made to the notepage
+        self._dao.edit_time_utc = now
+        session.add(self._dao)
+        session.flush()
 
+        # Record the change made.
+        rev = dao.NotepageRevision(
+            node_id=self.node_id,
+            revision_id=self._dao.revision_id,
+            delta_to_previous=json.dumps(
+                [{'action': 'remove_note',
+                  'note_id': note_dao.node_id}]),
+            editor_user_id=_request_user_id(),
+            edit_time_utc=now)
+        session.add(rev)
+        session.flush()
+                       
         # Invalidate our cache of children, if present.
         if hasattr(self, "_children"):
             del self._children
 
         return note
 
-    @property
-    def bounding_box(self):
-        children = self.children
-        if len(children) == 0:
-            return (0, 0, 0, 0)
-
-        first_child = children[0]
-        left = first_child.x_pos_um
-        top = first_child.y_pos_um
-        right = left + first_child.width_um
-        bottom = top + first_child.height_um
-
-        for child in children[1:]:
-            if child.x_pos_um < left:
-                left = child.x_pos_um
-            if child.y_pos_um < top:
-                top = child.y_pos_um
-            if child.x_pos_um + child.width_um > right:
-                right = child.x_pos_um + child.width_um
-            if child.y_pos_um + child.height_um > bottom:
-                bottom = child.y_pos_um + child.height_um
-
-        return (left, top, bottom, right)
-        
     def _calculate_note_position(self):
         # By sorting the children by position, we can do a single loop through
         # the list of children (since we're always moving right+down) and not
@@ -695,16 +825,22 @@ class Notepage(FilesystemNode):
         # a potention O(n^2) worst case to O(n) guaranteed case.
         children = sorted(
             self.children,
-            key=lambda child: (child.x_pos_um, child.y_pos_um, child.name))
+            key=lambda child: (child.pos_um, child.name))
         x = y = 0
 
+        log.debug("calculate_note_position starting")
+
         for child in children:
+            log.debug("considering child %r", child)
+
             # Will we interfere with this child?
-            if (x - NOTE_SPACING <= child.x_pos_um <= x + NOTE_SPACING and
-                y - NOTE_SPACING <= child.y_pos_um <= y + NOTE_SPACING):
+            if (x - NOTE_SPACING <= child.pos_um[0] <= x + NOTE_SPACING and
+                y - NOTE_SPACING <= child.pos_um[1] <= y + NOTE_SPACING):
                 # Yes; move down and to the right and try again.
                 x += NOTE_SPACING
                 y += NOTE_SPACING
+
+                log.debug("overlap detected; moving note to (%r, %r)", x, y)
 
         return (x, y)
 
@@ -726,15 +862,37 @@ class Notepage(FilesystemNode):
                 self._children.add(child_node)
         return self._children
 
+    def update(self, changes):
+        """\
+notepage.update(changes) -> None
+
+Record the specified changes to this notepage.
+"""
+        session = _request_db_session()
+        now = datetime.utcnow()
+
+        self._dao.edit_time_utc = now
+        session.add(self._dao)
+        session.flush()
+
+        rev = dao.NotepageRevision(
+            node_id=self.node_id,
+            revision_id=self.revision_id,
+            delta_to_previous=json.dumps(changes),
+            editor_user_id=_request_user_id(),
+            edit_time_utc=now)
+        session.add(rev)
+        session.flush()
+        return
+
 class Note(FilesystemNode):
     def _to_json(self):
         d = super(Note, self)._to_json()
         d['z_index'] = self.z_index
         d['contents_markdown'] = self.contents_markdown
-        d['x_pos_um'] = self.x_pos_um
-        d['y_pos_um'] = self.y_pos_um
-        d['width_um'] = self.width_um
-        d['height_um'] = self.height_um
+        d['pos_um'] = self.pos_um
+        d['size_um'] = self.size_um
+        d['revision_id'] = self.revision_id
         return d
 
     def _get_z_index(self):
@@ -743,7 +901,6 @@ class Note(FilesystemNode):
         if not isinstance(value, (int, long, float)):
             raise InvalidParameterError("z_index must be a number")
         self._dao.z_index = int(value)
-        self._dao.contents_hash_sha256 = None
         return
     z_index = property(_get_z_index, _set_z_index)
 
@@ -753,81 +910,47 @@ class Note(FilesystemNode):
         if not isinstance(value, basestring):
             raise InvalidParameterError("contents_markdown must be a string")
         self._dao.contents_markdown = value
-        self._dao.contents_hash_sha256 = None
         return
     contents_markdown = property(_get_contents_markdown,
                                  _set_contents_markdown)
     
-    def _get_contents_hash_sha256(self):
-        return self._dao.contents_hash_sha256
-
-    def calculate_contents_hash_sha256(self):
-        hasher = sha256()
-        # Start by hashing the content length and content
-        hasher.update(pack("<i", len(self.contents_markdown)))
-        hasher.update(self.contents_markdown)
-
-        # And the x/y pos, width, height, and z-index
-        hasher.update(pack("<qqqqi", self.x_pos_um, self.y_pos_um,
-                           self.width_um, self.height_um, self.z_index))
-
-        # FIXME: Add in display preferences
-        digest = hasher.hexdigest()
-        self._dao.contents_hash_sha256 = digest
-        return digest
-
-    def _get_x_pos_um(self):
-        return self._dao.x_pos_um
-    def _set_x_pos_um(self, value):
-        if not isinstance(value, (int, long, float)):
-            raise InvalidParameterError("x_pos_um must be a number")
-
-        self._dao.x_pos_um = int(value)
-        self._dao.contents_hash_sha256 = None
+    def _get_pos_um(self):
+        return (self._dao.x_pos_um, self._dao.y_pos_um)
+    def _set_pos_um(self, value):
+        if (not isinstance(value, (list, tuple)) or
+            len(value) != 2
+            or not isinstance(value[0], (int, long, float))
+            or not isinstance(value[1], (int, long, float))):
+            raise InvalidParameterError("pos_um must be a value of (int, int)")
+        self._dao.x_pos_um = int(value[0])
+        self._dao.y_pos_um = int(value[1])
         return
-    x_pos_um = property(_get_x_pos_um, _set_x_pos_um)
+    pos_um = property(_get_pos_um, _set_pos_um)
 
-    def _get_y_pos_um(self):
-        return self._dao.y_pos_um
-    def _set_y_pos_um(self, value):
-        if not isinstance(value, (int, long, float)):
-            raise InvalidParameterError("y_pos_um must be a number")
-
-        self._dao.y_pos_um = int(value)
-        self._dao.contents_hash_sha256 = None
+    def _get_size_um(self):
+        return (self._dao.width_um, self._dao.height_um)
+    def _set_size_um(self, value):
+        if (not isinstance(value, (list, tuple)) or
+            len(value) != 2
+            or not isinstance(value[0], (int, long, float))
+            or not isinstance(value[1], (int, long, float))):
+            raise InvalidParameterError("size_um must be a value of (int, int)")
+        self._dao.width_um = int(value[0])
+        self._dao.height_um = int(value[1])
         return
-    y_pos_um = property(_get_y_pos_um, _set_y_pos_um)
+    size_um = property(_get_size_um, _set_size_um)
 
-    def _get_width_um(self):
-        return self._dao.width_um
-    def _set_width_um(self, value):
-        if not isinstance(value, (int, long, float)):
-            raise InvalidParameterError("width_um must be a number")
+    @property
+    def revision_id(self):
+        return self._dao.revision_id
 
-        self._dao.width_um = int(value)
-        self._dao.contents_hash_sha256 = None
-        return
-    width_um = property(_get_width_um, _set_width_um)
-
-    def _get_height_um(self):
-        return self._dao.height_um
-    def _set_height_um(self, value):
-        if not isinstance(value, (int, long, float)):
-            raise InvalidParameterError("height_um must be a number")
-
-        self._dao.height_um = int(value)
-        self._dao.contents_hash_sha256 = None
-        return
-    height_um = property(_get_height_um, _set_height_um)
-
-    def write(self):
+    def update(self):
         # The user must have PERM_EDIT_DOCUMENT permission on the notepage.
         if not self.parent.access(PERM_EDIT_DOCUMENT):
             raise PermissionDeniedError(
                 "%s does not have permission to edit notepage %s" %
                 (_request_username(), self.parent.full_name))
         
-        self.calculate_contents_hash_sha256()
         session = _request_db_session()
         session.add(self._dao)
         session.flush()

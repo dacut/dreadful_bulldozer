@@ -385,12 +385,13 @@ class Notepage(Node):
 
     node_id = Column(Integer, ForeignKey('dz_nodes.node_id'), nullable=False,
                      primary_key=True)
-    current_revision_id_sha256 = Column(CHAR(64), nullable=True)
     snap_to_grid = Column(Boolean, nullable=True)
     grid_x_um = Column(Integer, nullable=True)
     grid_y_um = Column(Integer, nullable=True)
     grid_x_subdivisions = Column(Integer, nullable=True)
     grid_y_subdivisions = Column(Integer, nullable=True)
+    revision_id = Column(Integer, nullable=False)
+    edit_time_utc = Column(DateTime, nullable=False)
 
     __table_args__ = (
         CheckConstraint("grid_x_um IS NULL OR grid_x_um > 0"),
@@ -403,6 +404,7 @@ class Notepage(Node):
 
     __mapper_args__ = {
         'polymorphic_identity': NODE_TYPE_ID_NOTEPAGE,
+        'version_id_col': revision_id,
     }
 
 class NotepageGuide(Base):
@@ -424,23 +426,16 @@ class NotepageRevision(Base):
 
     node_id = Column(Integer, ForeignKey('dz_notepages.node_id'),
                      nullable=False)
-    revision_id_sha256 = Column(CHAR(64), nullable=False)
-    previous_revision_id_sha256 = Column(
-        CHAR(64), ForeignKey('dz_notepage_revisions.revision_id_sha256'),
-        nullable=True)
+    revision_id = Column(Integer, nullable=False)
     delta_to_previous = Column(Text, nullable=True)
     editor_user_id = Column(Integer, nullable=False)
     edit_time_utc = Column(DateTime, nullable=True)
 
     notepage = relationship("Notepage", backref='revisions')
-    previous_revision = relationship('NotepageRevision')
     
     __table_args__ = (
-        PrimaryKeyConstraint("node_id", "revision_id_sha256"),
-        UniqueConstraint("node_id", "previous_revision_id_sha256"),
+        PrimaryKeyConstraint("node_id", "revision_id"),
     )
-Index("i_dz_nprev_prev", NotepageRevision.node_id,
-      NotepageRevision.previous_revision_id_sha256)
 
 class Note(Node):
     __tablename__ = "dz_notes"
@@ -448,15 +443,16 @@ class Note(Node):
     node_id = Column(Integer, ForeignKey('dz_nodes.node_id'), nullable=False,
                      primary_key=True)
     contents_markdown = Column(Text, nullable=True)
-    contents_hash_sha256 = Column(CHAR(64), nullable=True)
     x_pos_um = Column(Integer, nullable=False)
     y_pos_um = Column(Integer, nullable=False)
     width_um = Column(Integer, nullable=False)
     height_um = Column(Integer, nullable=False)
     z_index = Column(Integer, nullable=False)
+    revision_id = Column(Integer, nullable=False)
 
     __mapper_args__ = {
         'polymorphic_identity': NODE_TYPE_ID_NOTE,
+        'version_id_col': revision_id,
     }
 
 class NoteHashtag(Base):
@@ -502,7 +498,7 @@ class SessionNotepage(Base):
     session_id = Column(CHAR(64), ForeignKey('dz_sessions.session_id'),
                         nullable=False)
     node_id = Column(Integer, nullable=False)
-    revision_id_sha256 = Column(CHAR(64), nullable=False)
+    revision_id = Column(Integer, nullable=False)
     listener_ipv4 = Column(String(15), nullable=True)
     listener_ipv6 = Column(String(45), nullable=True)
     listener_port = Column(Integer, nullable=True)
@@ -512,7 +508,7 @@ class SessionNotepage(Base):
     __table_args__ = (
         PrimaryKeyConstraint("session_id", "node_id"),
         ForeignKeyConstraint(
-            ["node_id", "revision_id_sha256"],
+            ["node_id", "revision_id"],
             ["dz_notepage_revisions.node_id",
-             "dz_notepage_revisions.revision_id_sha256"]),
+             "dz_notepage_revisions.revision_id"]),
     )

@@ -171,8 +171,8 @@ ACCEPT_UNTIL_UTC	TIMESTAMP}</string>
 			<real>-1</real>
 			<key>Points</key>
 			<array>
-				<string>{194.3999919891358, 332.99990917053464}</string>
-				<string>{151.19985014374896, 316.79999065399164}</string>
+				<string>{194.3999919891358, 331.19991803587294}</string>
+				<string>{151.19985014374896, 316.7999906539917}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -1575,13 +1575,13 @@ INHERIT_PERMISSIONS	BOOLEAN}</string>
 \pard\tx2019\tx2649
 
 \f0\fs12 \cf0 NODE_ID	INT64*	PK FK\
-OWNER_USER_ID	INT64*	FK\
-CURRENT_REVISION_ID_SHA256	SHA256	FK\
 SNAP_TO_GRID	BOOLEAN\
 GRID_X_UM	INT32\
 GRID_Y_UM	INT32\
 GRID_X_SUBDIVISIONS	INT32\
-GRID_Y_SUBDIVISIONS	INT32}</string>
+GRID_Y_SUBDIVISIONS	INT32\
+REVISION_ID	INT64*\
+EDIT_TIME_UTC	TIMESTAMP*}</string>
 					</dict>
 					<key>TextPlacement</key>
 					<integer>0</integer>
@@ -1796,7 +1796,7 @@ PERMISSIONS	INT64*}</string>
 			<real>-1</real>
 			<key>Points</key>
 			<array>
-				<string>{194.39999198913583, 349.19986709994993}</string>
+				<string>{194.39999198913577, 345.59988045141802}</string>
 				<string>{934.20010275241521, 262.80011711144022}</string>
 				<string>{1016.9998455584368, 158.39999294281006}</string>
 			</array>
@@ -2283,7 +2283,7 @@ IS_GROUP	BOOLEAN*}</string>
 			<key>Points</key>
 			<array>
 				<string>{64.800141273182192, 446.39998817443848}</string>
-				<string>{64.799856247264472, 381.59999073876259}</string>
+				<string>{64.799856247264472, 374.39998997582308}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2339,7 +2339,7 @@ IS_GROUP	BOOLEAN*}</string>
 			<real>10.833343505859375</real>
 			<key>Points</key>
 			<array>
-				<string>{64.800146041553816, 316.79999065399164}</string>
+				<string>{64.800146041553845, 316.7999906539917}</string>
 				<string>{64.799992561340375, 122.39999771118164}</string>
 			</array>
 			<key>Style</key>
@@ -2767,12 +2767,12 @@ HASHTAG	VARCHAR(256)*	PK:2}</string>
 
 \f0\fs12 \cf0 NODE_ID	INT64*	PK\
 CONTENTS_MARKDOWN	CLOB\
-CONTENTS_HASH_SHA256	SHA256*\
 X_POS_UM	INT64*\
 Y_POS_UM	INT64*\
 WIDTH_UM	INT64*\
 HEIGHT_UM	INT64*\
-Z_INDEX	INT32*}</string>
+Z_INDEX	INT32*\
+REVISION_ID	INT64*}</string>
 					</dict>
 					<key>TextPlacement</key>
 					<integer>0</integer>
@@ -2869,7 +2869,7 @@ Z_INDEX	INT32*}</string>
 
 \f0\fs12 \cf0 SESSION_ID	SHA256*	PK:1 FK\
 NODE_ID	INT64*	PK:2 FK\
-REVISION_ID_SHA256	SHA256*	FK\
+REVISION_ID	INT64*	FK\
 LISTENER_IPV4	VARCHAR(15)\
 LISTENER_IPV6	VARCHAR(45)\
 LISTENER_PORT	INT32}</string>
@@ -3033,7 +3033,7 @@ LAST_PING_TIME_UTC	TIMESTAMP*}</string>
 				</dict>
 				<dict>
 					<key>Bounds</key>
-					<string>{{21.600004196166992, 331.19998921288362}, {172.79998779296881, 50.400001525878906}}</string>
+					<string>{{21.600004196166992, 331.19998921288362}, {172.79998779296881, 43.200000762939453}}</string>
 					<key>Class</key>
 					<string>ShapedGraphic</string>
 					<key>ID</key>
@@ -3059,8 +3059,7 @@ LAST_PING_TIME_UTC	TIMESTAMP*}</string>
 \pard\tx2051\tx2707
 
 \f0\fs12 \cf0 NODE_ID	INT64*	PK:1 FK\
-REVISION_ID_SHA256	SHA256*	PK:2\
-PREVIOUS_REVISION_ID_SHA256	SHA256	FK\
+REVISION_ID	INT64*	PK:2\
 DELTA_TO_PREVIOUS	CLOB\
 EDITOR_USER_ID	INT64*\
 EDIT_TIME_UTC	TIMESTAMP*}</string>
@@ -3146,7 +3145,7 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-01-06 09:50:00 +0000</string>
+	<string>2014-01-11 22:28:14 +0000</string>
 	<key>Modifier</key>
 	<string>Cuthbert, Dave</string>
 	<key>NotesVisible</key>
@@ -3177,7 +3176,7 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 		<key>NSPaperName</key>
 		<array>
 			<string>string</string>
-			<string>F9DB74C9-D7C4-4542-8CB3-09092AE36847</string>
+			<string>368962F1-118A-4358-A52B-378D26A246D3</string>
 		</array>
 		<key>NSPaperSize</key>
 		<array>
@@ -3246,7 +3245,7 @@ EDIT_TIME_UTC	TIMESTAMP*}</string>
 		<key>SidebarWidth</key>
 		<integer>120</integer>
 		<key>VisibleRegion</key>
-		<string>{{0, 47.727270830761391}, {1040.1514738196092, 559.84846260210577}}</string>
+		<string>{{0, 0}, {1040.1514738196092, 559.84846260210588}}</string>
 		<key>Zoom</key>
 		<real>1.3200000524520874</real>
 		<key>ZoomValues</key>

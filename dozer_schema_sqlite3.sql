@@ -136,12 +136,13 @@ VALUES(1);
 -- Notepages -----------------------------------------------------------------
 CREATE TABLE dz_notepages(
     node_id INTEGER PRIMARY KEY NOT NULL,
-    current_revision_id_sha256 CHAR(64),
     snap_to_grid INTEGER,
     grid_x_um INTEGER,
     grid_y_um INTEGER,
     grid_x_subdivisions INTEGER,
     grid_y_subdivisions INTEGER,
+    revision_id INTEGER NOT NULL,
+    edit_time_utc TIMESTAMP(3) NOT NULL,
     FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id),
     CHECK (grid_x_um IS NULL OR grid_x_um > 0),
     CHECK (grid_y_um IS NULL OR grid_y_um > 0),
@@ -157,30 +158,23 @@ CREATE TABLE dz_notepage_guides(
 
 CREATE TABLE dz_notepage_revisions(
     node_id INTEGER NOT NULL,
-    revision_id_sha256 CHAR(64) NOT NULL,
-    previous_revision_id_sha256 CHAR(64),
+    revision_id INTEGER NOT NULL,
     delta_to_previous TEXT,
     editor_user_id INTEGER NOT NULL,
-    edit_time_utc TIMESTAMP(3),
-    PRIMARY KEY (node_id, revision_id_sha256),
-    UNIQUE (node_id, previous_revision_id_sha256),
-    FOREIGN KEY (node_id) REFERENCES dz_notepages(node_id),
-    FOREIGN KEY (previous_revision_id_sha256)
-      REFERENCES dz_notepage_revisions(revision_id_sha256));
-
-CREATE INDEX i_dz_nprev_prev
-ON dz_notepage_revisions(node_id, previous_revision_id_sha256);
+    edit_time_utc TIMESTAMP(3) NOT NULL,
+    PRIMARY KEY (node_id, revision_id),
+    FOREIGN KEY (node_id) REFERENCES dz_notepages(node_id));
 
 -- Notes ---------------------------------------------------------------------
 CREATE TABLE dz_notes(
     node_id INTEGER PRIMARY KEY NOT NULL,
     contents_markdown TEXT,
-    contents_hash_sha256 CHAR(64),
     x_pos_um INTEGER NOT NULL,
     y_pos_um INTEGER NOT NULL,
     width_um INTEGER NOT NULL,
     height_um INTEGER NOT NULL,
     z_index INTEGER NOT NULL,
+    revision_id INTEGER NOT NULL,
     FOREIGN KEY (node_id) REFERENCES dz_nodes(node_id));
 
 CREATE TABLE dz_note_hashtags(
@@ -210,15 +204,15 @@ ON dz_session_secrets(valid_from_utc DESC);
 CREATE TABLE dz_session_notepages(
     session_id CHAR(64) NOT NULL,
     node_id INTEGER NOT NULL,
-    revision_id_sha256 CHAR(64) NOT NULL,
+    revision_id INTEGER NOT NULL,
     listener_ipv4 VARCHAR(15),
     listener_ipv6 VARCHAR(45),
     listener_port INTEGER,
     PRIMARY KEY (session_id, node_id),
     FOREIGN KEY (session_id) REFERENCES dz_sessions(session_id),
-    FOREIGN KEY (node_id, revision_id_sha256)
-      REFERENCES dz_notepage_revisions(node_id, revision_id_sha256));
+    FOREIGN KEY (node_id, revision_id)
+      REFERENCES dz_notepage_revisions(node_id, revision_id));
 CREATE INDEX i_dz_sessnp_node_id
-ON dz_session_notpages(node_id);
+ON dz_session_notepages(node_id);
 
 COMMIT;
