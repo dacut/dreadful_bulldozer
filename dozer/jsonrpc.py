@@ -94,8 +94,11 @@ class JSONRPC(object):
             result = create_error(
                 code=PARSE_ERROR,
                 message="Malformed JSON-RPC request")
+
+        result = to_json(result)
+        log.debug("JSON-RPC result data: %r", result)
             
-        return to_json(result)
+        return result
 
     def _handle_request(self, request):
         jsonrpc = request.get("jsonrpc")

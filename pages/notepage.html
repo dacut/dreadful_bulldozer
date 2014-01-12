@@ -25,8 +25,8 @@ else:
     <link href="/static/bootstrap.css" rel="stylesheet">
     <link href="/static/notepage.css" rel="stylesheet">
     <script type="text/javascript"><!--
-window.node = ${to_json(node)};
-window.node_contents = ${to_json(node.children)};
+window.notepage = ${to_json(node)};
+window.notepage.children = ${to_json(node.children)};
 --></script>
   </head>
   <body>

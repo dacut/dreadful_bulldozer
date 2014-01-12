@@ -3,12 +3,53 @@ jQuery(function($) {
     var edited_note = null;
 
     function onCreateNoteSuccess(id, note) {
-        node_contents.push(note);
+        window.notepage.children.push(note);
         drawNote(note);
     }
 
-    function onUpdateNotepageSuccess(id) {
+    function onUpdateNotepageSuccess(id, result_block) {
+        var notepage_revision_id = result_block['notepage_revision_id'];
+        var results = result_block['results'];
+        var i, result, note, pos_um, size_um, z_index, contents_markdown;
+
         console.log("Successful update");
+
+        window.notepage.revision_id = notepage_revision_id;
+        
+        for (i = 0; i < results.length; ++i) {
+            result = results[i];
+            note = getNoteById(result['note_id']);
+            if (note === null) {
+                console.log("onUpdateNotepageSuccess: cannot find note id " +
+                            result['note_id']);
+                continue;
+            }
+
+            pos_um = result['pos_um'];
+            size_um = result['size_um'];
+            z_index = result['z_index'];
+            contents_markdown = result['contents_markdown'];
+
+            if (pos_um !== undefined && pos_um !== null) {
+                note.pos_um = pos_um;
+            }
+
+            if (size_um !== undefined && size_um !== null) {
+                note.size_um = size_um;
+            }
+
+            if (z_index !== undefined && z_index !== null) {
+                note.z_index = z_index;
+            }
+
+            if (contents_markdown !== undefined && contents_markdown !== null) {
+                note.contents_markdown = contents_markdown;
+            }
+
+            drawNote(note);
+        }
+
+        return;
     }
 
     function onUpdateNotepageError(id) {
@@ -55,9 +96,14 @@ jQuery(function($) {
     }
 
     function updateNote(note, text) {
-        // FIXME: Update the note contents on the server.
-        note.contents_markdown = text;
-        drawNote(note);
+        dozer.update_notepage(
+            window.notepage.node_id,
+            [{"action": "edit_note",
+              "note_id": note.node_id,
+              "revision_id": note.revision_id,
+              "contents_markdown": text}],
+            onUpdateNotepageSuccess,
+            onUpdateNotepageError);
     }
 
     function stopDragging() {
@@ -78,9 +124,18 @@ jQuery(function($) {
         viewport.removeData("drag-last-x");
         viewport.removeData("drag-last-y");
 
+        console.log("stopDragging: pos_um=" + JSON.stringify(pos_um) +
+                    ", note.pos_um=" + JSON.stringify(note.pos_um));
+
+        // Did we actually move the note?
+        if (pos_um[0] === note.pos_um[0] && pos_um[1] === note.pos_um[1]) {
+            console.log("Skipping update; no change in position.");
+            return;
+        }
+
         // Update the server with the new note position.
         dozer.update_notepage(
-            node.node_id,
+            window.notepage.node_id,
             [{"action": "edit_note",
               "note_id": note.node_id,
               "revision_id": note.revision_id,
@@ -246,6 +301,19 @@ jQuery(function($) {
         return [1e-5 * width, 1e-5 * height];
     }
 
+    function getNoteById(note_id) {
+        var i, note;
+
+        for (i = 0; i < window.notepage.children.length; ++i) {
+            note = window.notepage.children[i];
+            if (note.node_id == note_id) {
+                return note;
+            }
+        }
+
+        return null;
+    }
+
     function getNoteSizeInMicrons(noteDOM, pixelsPerMicron) {
         var width = noteDOM.css("width");
         var height = noteDOM.css("height");
@@ -256,8 +324,11 @@ jQuery(function($) {
         
         width = Number(width.substring(0, width.length - 2));
         height = Number(height.substring(0, height.length - 2));
-        
-        return [width / pixelsPerMicron[0], height / pixelsPerMicron[1]];
+
+        width = Math.round(width / pixelsPerMicron[0]);
+        height = Math.round(height / pixelsPerMicron[1]);
+
+        return [width, height];
     }
     
     function getNotePositionInMicrons(noteDOM, pixelsPerMicron) {
@@ -275,13 +346,16 @@ jQuery(function($) {
         
         left = Number(left.substring(0, left.length - 2));
         top = Number(top.substring(0, top.length - 2));
+
+        left = Math.round(left / pixelsPerMicron[0]);
+        top = Math.round(top / pixelsPerMicron[1]);
         
-        return [left / pixelsPerMicron[0], top / pixelsPerMicron[1]];
+        return [left, top];
     }
 
     $("#createNoteAction").click(function () {
         console.log("create note clicked");
-        dozer.create_note(node.full_name, onCreateNoteSuccess, null);
+        dozer.create_note(window.notepage.node_id, onCreateNoteSuccess, null);
     });
 
     $(window).mousemove(onMouseMove);
@@ -289,8 +363,8 @@ jQuery(function($) {
     $(window).on("blur", stopDragging);
 
     (function () {
-        for (var i = 0; i < node_contents.length; ++i) {
-            var note = node_contents[i];
+        for (var i = 0; i < window.notepage.children.length; ++i) {
+            var note = window.notepage.children[i];
             drawNote(note);
         }
     })();

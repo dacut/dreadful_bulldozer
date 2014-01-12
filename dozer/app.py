@@ -35,9 +35,13 @@ class DozerAPI(object):
                                   inherit_permissions=inherit_permissions)
 
     @jsonrpc.expose
-    def create_note(self, notepage_name=None, pos_um=None, size_um=None):
-        return fs.create_note(
-            notepage_name=notepage_name, pos_um=pos_um, size_um=size_um)
+    def create_note(self, notepage_id=None, pos_um=None, size_um=None):
+        notepage = fs.FilesystemNode.get_node_by_id(notepage_id)
+        if not isinstance(notepage, fs.Notepage):
+            raise InvalidParameterError(
+                "notepage_id %r does not refer to a notepage", notepage_id)
+
+        return notepage.create_note(pos_um=pos_um, size_um=size_um)
 
     @jsonrpc.expose
     def update_notepage(self, notepage_id=None, updates=None):
@@ -50,72 +54,95 @@ class DozerAPI(object):
             raise InvalidParameterError(
                 "notepage_id %r does not refer to a notepage", notepage_id)
 
-        # Remember the notepage's original revision_id
-        old_rev = notepage.revision_id
-        
         # Running change log.
         changes = []
+        
+        # Updated notes
+        results = []
 
-        for uid, u in enumerate(updates):
-            action = u.get('action')
+        for update_id, update in enumerate(updates):
+            action = update.get('action')
             if action is None:
                 raise InvalidParameterError(
-                    "update %d does not have an action", uid)
-            
-            change = {}
+                    "update %d does not have an action", update_id)
+
+            update['update_id'] = update_id
             
             if action == "edit_note":
-                note_id = u.get('note_id')
-                if note_id is None:
-                    raise InvalidParameterError(
-                        "update %d action edit_note does not have a note_id",
-                        uid)
-                
-                revision_id = u.get('revision_id')
-                if revision_id is None:
-                    raise InvalidParameterError(
-                        "update %d action edit_note does not have a "
-                        "revision_id", uid)
-                
-                note = fs.FilesystemNode.get_node_by_id(note_id)
-                if not isinstance(note, fs.Note):
-                    raise InvalidParameterError(
-                        "update %d action edit_note node_id %d does not refer "
-                        "to a note", uid, note_id)
-
-                change['action'] = 'edit_note'
-                change['note_id'] = note_id
-                
-                pos_um = u.get('pos_um')
-                if pos_um is not None:
-                    change['pos_um'] = [note.pos_um, pos_um]
-                    note.pos_um = pos_um
-
-                size_um = u.get('size_um')
-                if size_um is not None:
-                    change['size_um'] = [note.size_um, size_um]
-                    note.size_um = size_um
-
-                z_index = u.get('z_index')
-                if z_index is not None:
-                    change['z_index'] = [note.z_index, z_index]
-                    note.z_index = z_index
-
-                contents_markdown = u.get('contents_markdown')
-                if contents_markdown is not None:
-                    change['contents_markdown'] = [
-                        note.contents_markdown, contents_markdown]
-                    note.contents_markdown = contents_markdown
-
-                note.update()
+                change, result = self._edit_note(notepage, update)
                 changes.append(change)
+                results.append(result)
+            else:
+                raise InvalidParameterError(
+                    "update %d has invalid action %r", update_id, action)
+        # end for
         
         notepage.update(changes)
-        return {'revision_id': notepage.revision_id}
+        return {
+            'notepage_revision_id': notepage.revision_id,
+            'results': results
+        }
 
     @jsonrpc.expose
     def list_folder(self, node_name=None):
         return fs.get_node(node_name).children
+
+    def _edit_note(self, notepage, update):
+        change = {}
+        result = {}
+
+        update_id = update['update_id']
+            
+        note_id = update.get('note_id')
+        if note_id is None:
+            raise InvalidParameterError(
+                "update %d action edit_note does not have a note_id",
+                update_id)
+
+        revision_id = update.get('revision_id')
+        if revision_id is None:
+            raise InvalidParameterError(
+                "update %d action edit_note does not have a "
+                "revision_id", update_id)
+
+        note = fs.FilesystemNode.get_node_by_id(note_id)
+        if not isinstance(note, fs.Note):
+            raise InvalidParameterError(
+                "update %d action edit_note node_id %d does not refer "
+                "to a note", update_id, note_id)
+
+        change['action'] = 'edit_note'
+        change['note_id'] = note_id
+        result['note_id'] = note_id
+
+        pos_um = update.get('pos_um')
+        if pos_um is not None:
+            change['pos_um'] = [note.pos_um, pos_um]
+            result['pos_um'] = pos_um
+            note.pos_um = pos_um
+
+        size_um = update.get('size_um')
+        if size_um is not None:
+            change['size_um'] = [note.size_um, size_um]
+            result['size_um'] = size_um
+            note.size_um = size_um
+
+        z_index = update.get('z_index')
+        if z_index is not None:
+            change['z_index'] = [note.z_index, z_index]
+            result['z_index'] = z_index
+            note.z_index = z_index
+
+        contents_markdown = update.get('contents_markdown')
+        if contents_markdown is not None:
+            change['contents_markdown'] = [
+                note.contents_markdown, contents_markdown]
+            result['contents_markdown'] = contents_markdown
+            note.contents_markdown = contents_markdown
+
+        note.update()
+        result['revision_id'] = note.revision_id
+        return change, result
 
 class DreadfulBulldozer(object):
     def __init__(self, server_root):

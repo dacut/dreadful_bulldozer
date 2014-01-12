@@ -143,23 +143,6 @@ the new notepage will inherit permissions from its parent.
     return parent.create_notepage(
         filename, inherit_permissions=inherit_permissions)
 
-def create_note(notepage_name, pos_um=None, size_um=None):
-    """\
-create_note(notepage_name, pos_um=None, size_um=None) -> Note
-
-Create a note for the specified notepage.
-"""
-    if not isinstance(notepage_name, basestring) or notepage_name[:1] != '/':
-        raise InvalidParameterError("notepage_name must be a string starting "
-                                    "with '/'")
-    
-    notepage = get_node(notepage_name)
-    if not isinstance(notepage, Notepage):
-        raise InvalidParameterError("Node is not a notepage: %r" %
-                                    notepage_name)
-    
-    return notepage.create_note(pos_um=pos_um, size_um=size_um)
-
 context = threading.local()
 
 def _request_user():
