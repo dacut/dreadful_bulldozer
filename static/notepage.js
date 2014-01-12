@@ -1,5 +1,5 @@
 jQuery(function($) {
-
+    var viewport = $("#viewport");
     var edited_note = null;
 
     function onCreateNoteSuccess(id, note) {
@@ -57,14 +57,13 @@ jQuery(function($) {
     }
 
     function drawNote(note) {
-        var domId, noteDOM, noteContentsDOM, viewport, style, converter;
+        var domId, noteDOM, noteContentsDOM, style, converter;
 
         domId = "note-" + note.node_id;
         noteDOM = $("#" + domId);
         
         if (noteDOM.length == 0) {
             // New note; need to create it.
-            viewport = $("#viewport");
             $('<div class="note" id="' + domId + '">' +
               '<div class="note-contents"></div>' +
               '</div>').appendTo(viewport);
@@ -108,7 +107,6 @@ jQuery(function($) {
 
     function stopDragging() {
         // Stop any drag operation currently in progress.
-        var viewport = $("#viewport");
         var targetId = viewport.data("drag-target");
         var target, note, pos_um;
 
@@ -146,7 +144,7 @@ jQuery(function($) {
 
     function onNoteMouseDown(e) {
         // Handle a mousedown event on a note.  This starts dragging the note.
-        var noteDOM = $(e.target), viewport = $("#viewport");
+        var noteDOM = $(e.target);
 
         if (! noteDOM.is(".note")) {
             // Mouse down on an inner item; select the note div.
@@ -191,20 +189,22 @@ jQuery(function($) {
 
         // Watch keypresses for Alt+Enter or Escape, which terminate the
         // editing process.
-        editor.keypress(onNoteEditKeypress);
-
+        editor.keydown(onNoteEditKeyDown);
         editor.trigger("focus");
 
         // Don't let this event bubble.
         return false;
     }
 
-    function onNoteEditKeypress(e) {
-        var target = $(e.target),
-            text;
+    function onNoteEditKeyDown(e) {
+        var target = $(e.target);
+        var text;
+
+        console.log("e.which == " + e.which);
 
         if (e.which === 27) {
             // Escape -- cancel editing.
+            target.parent().remove();
             drawNote(edited_note);
             edited_note = null;
             return false;
@@ -233,7 +233,6 @@ jQuery(function($) {
     function onMouseMove(e) {
         // Handle a mouse motion event on the viewport.  If a drag event is in
         // progress, this updates the position of the note on the viewport.
-        var viewport = $("#viewport");
         var targetId = viewport.data("drag-target");
         var target, lastX, lastY, deltaX, deltaY, left, top;
 
@@ -353,15 +352,23 @@ jQuery(function($) {
         return [left, top];
     }
 
+    // Resize the viewport so its height is the height of the document.
+    console.log("screen.availableHeight=" + screen.availHeight +
+                ", viewport.offset().top=" + viewport.offset().top);
+    //viewport.height(screen.availHeight - viewport.offset().top);
+
+    // Bind the "Create note" link.
     $("#createNoteAction").click(function () {
         console.log("create note clicked");
         dozer.create_note(window.notepage.node_id, onCreateNoteSuccess, null);
     });
 
+    // Bind motion events to allow dragging of notes.
     $(window).mousemove(onMouseMove);
     $(window).mouseup(stopDragging);
     $(window).on("blur", stopDragging);
 
+    // Add each note to the document.
     (function () {
         for (var i = 0; i < window.notepage.children.length; ++i) {
             var note = window.notepage.children[i];
