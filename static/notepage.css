@@ -18,6 +18,17 @@ body {
     resize: both;
 }
 
+#canvas {
+    position: relative:
+    border-width: 1px;
+    left: 0px;
+    top: 0px;
+    width: 1000mm;
+    height: 1000mm;
+    clip: auto;
+    overflow: hidden;
+}
+
 .note {
     position: absolute;
     background-color: rgb(100%, 100%, 80%);
