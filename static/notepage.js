@@ -353,9 +353,9 @@ jQuery(function($) {
     }
 
     // Resize the viewport so its height is the height of the document.
-    console.log("screen.availableHeight=" + screen.availHeight +
+    console.log("window.innerHeight=" + window.innerHeight +
                 ", viewport.offset().top=" + viewport.offset().top);
-    //viewport.height(screen.availHeight - viewport.offset().top);
+    viewport.height(window.innerHeight - viewport.offset().top - 20);
 
     // Bind the "Create note" link.
     $("#createNoteAction").click(function () {
