@@ -50,6 +50,30 @@ body {
     margin-top: 6px;
 }
 
+.note-contents h1 {
+    font-size: 18px;
+}
+
+.note-contents h2 {
+    font-size: 15px;
+}
+
+.note-contents h3 {
+    font-size: 12px;
+}
+
+.note-contents h4 {
+    font-size: 9px;
+}
+
+.note-contents h5 {
+    font-size: 7px;
+}
+
+.note-contents h6 {
+    font-size: 6px;
+}
+
 #note-edit {
     position: absolute;
     width: 100%;
