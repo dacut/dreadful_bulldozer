@@ -34,6 +34,12 @@ body {
     background-color: rgb(100%, 100%, 80%);
     border-style: solid;
     border-width: 1px;
+    box-sizing: content-box;
+}
+
+.note.selected {
+    border-width: 3px;
+    border-color: blue;
 }
 
 .note-contents {
@@ -46,6 +52,10 @@ body {
     box-sizing: border-box;
 }
 
+/* Get rid of the extra space in front of header items at the top of the
+ * note.  Otherwise, the header is rendered 20% into the note, wasting
+ * substanital space on a 3" x 3" standard note.
+ */
 .note-contents h1,h2,h3:first-child {
     margin-top: 6px;
 }
@@ -74,10 +84,12 @@ body {
     font-size: 6px;
 }
 
+/* Style for the edit form. */
 #note-edit {
     position: absolute;
     width: 100%;
     height: 100%;
     font-family: Menlo, Consolas, Courier New, monospace;
+    font-size: 12px;
 }
 
