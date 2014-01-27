@@ -1,73 +1,74 @@
 #!/usr/bin/env python2.7
 from __future__ import absolute_import, print_function
+from dozer.config import get_config, get_root, set_root
+from getopt import getopt, GetoptError
 from logging import basicConfig, getLogger, DEBUG
 from os.path import abspath
-from sys import path as sys_path, stderr
+from sys import argv, path as sys_path, stderr
 
-root = abspath(".")
+def main(args):
+    try:
+        opts, args = getopt(args, "r:c:", ["root=", "config="])
+    except GetoptError as e:
+        print(str(e), file=stderr)
+        usage()
+        return 1
 
-if "." not in sys_path and root not in sys_path:
-    sys_path[:0] = [root]
+    config_filename = None
 
-basicConfig(level=DEBUG, stream=stderr)
+    for opt, value in opts:
+        if opt in ("-r", "--root"):
+            set_root(value)
+        elif opt in ("-c", "--config"):
+            config_filename = value
 
-import cherrypy
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from dozer.dbpool import ConnectionPool, SQLitePool
-from dozer.app import DreadfulBulldozer
-from dozer.jsonrpc import JSONRPC
-from dozer.session import UserSessionTool
-from dozer.transaction import TransactionTool
+    if len(args) > 0:
+        print("Unknown argument %s" % args[0], file=stderr)
+        usage()
+        return 1
+    
+    root = get_root()
 
-engine = create_engine("sqlite:///" + root + "/dozer.db")
-session_class = sessionmaker(bind=engine)
-cherrypy.tools.transaction = TransactionTool(session_class)
-cherrypy.tools.user_session = UserSessionTool()
+    if "." not in sys_path and root not in sys_path:
+        sys_path[:0] = [root]
 
-cherrypy.config.update({
-        'server.socket_host': '127.0.0.1',
-        'server.socket_port': 8080,
-        'log.screen': False,
-    })
+    # Configure logging
+    basicConfig(level=DEBUG, stream=stderr)
 
-config = {
-    '/': {
-        'tools.trailing_slash.on': True,
-        'tools.staticdir.root': root,
-        'tools.transaction.on': True,
-        'tools.user_session.on': True,
-    },
-    '/jsonrpc': {
-        'request.process_request_body': False,
-        'tools.transaction.on': True,
-        'tools.user_session.on': True,
-    },
-    '/static': {
-        'tools.staticdir.on': True,
-        'tools.staticdir.dir': 'static',
-        'tools.transaction.on': False,
-        'tools.user_session.on': False,
-    },
-    '/bootstrap': {
-        'tools.staticdir.on': True,
-        'tools.staticdir.dir': 'bootstrap',
-        'tools.transaction.on': False,
-        'tools.user_session.on': False,
-    },
-    '/jquery': {
-        'tools.staticdir.on': True,
-        'tools.staticdir.dir': 'jquery',
-        'tools.transaction.on': False,
-        'tools.user_session.on': False,
-    },
-}
+    start_dozer()
+    return 0
 
-app = cherrypy.tree.mount(
-    DreadfulBulldozer(server_root=root), "/", config)
-cherrypy.engine.start()
-cherrypy.engine.block()
-exit(0)
+def start_dozer():
+    # Bring in application modules
+    import cherrypy
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from dozer.dbpool import ConnectionPool, SQLitePool
+    from dozer.app import DreadfulBulldozer
+    from dozer.jsonrpc import JSONRPC
+    from dozer.session import UserSessionTool
+    from dozer.transaction import TransactionTool
+
+    # Load server configuration
+    config = get_config()
+    cherrypy.config.update(config)
+
+    server_root = config["dozer"]["server_root"]
+    database_url = config["dozer"]["database_url"]
+    icon_set = config["dozer"]["icon_set"]
+
+    # Set up CherryPy tools
+    engine = create_engine(database_url)
+    session_class = sessionmaker(bind=engine)
+    cherrypy.tools.transaction = TransactionTool(session_class)
+    cherrypy.tools.user_session = UserSessionTool()
+
+    app = cherrypy.tree.mount(DreadfulBulldozer(server_root), "/", config)
+    cherrypy.engine.start()
+    cherrypy.engine.block()
+
+if __name__ == "__main__":
+    exit(main(argv[1:]))
 
 ##  Local variables:
 ##  mode: Python

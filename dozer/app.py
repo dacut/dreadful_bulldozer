@@ -148,7 +148,7 @@ class DreadfulBulldozer(object):
     def __init__(self, server_root):
         super(DreadfulBulldozer, self).__init__()
         self.server_root = server_root
-        self.template_dir = server_root + "/pages"
+        self.template_dir = self.server_root + "/pages"
         self.template_lookup = TemplateLookup(directories=[self.template_dir])
         self.jsonrpc = jsonrpc.JSONRPC()
         self.jsonrpc.dozer = DozerAPI()
