@@ -34,12 +34,52 @@ body {
     background-color: rgb(100%, 100%, 80%);
     border-style: solid;
     border-width: 1px;
-    box-sizing: content-box;
+    box-sizing: border-box;
 }
 
 .note.selected {
-    border-width: 3px;
     border-color: blue;
+    box-shadow: 0px 0px 5px 2px blue;
+}
+
+.note-title {
+    height: 18px;
+    width: 100%;
+    box-sizing: border-box;
+    position: absolute;
+    background-color: rgba(128, 128, 255, 0.7);
+}
+
+span.note-title-move {
+    position: absolute;
+    padding-left: 2px;
+}
+
+span.note-remove {
+    right: 0px;
+    position: absolute;
+    display: block;
+}
+
+span.note-resize {
+    right: 0px;
+    bottom: 0px;
+    top: auto;
+    position: absolute;
+    display: block;
+}
+
+span.note-move {
+    left: 0px;
+    top: 0px;
+    padding-left: 2px;
+    padding-right: 4px;
+    position: absolute;
+    display: block;
+}
+
+.note-control {
+    background-color: rgba(128, 128, 255, 0.7);
 }
 
 .note-contents {

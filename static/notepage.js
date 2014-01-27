@@ -2,7 +2,7 @@ jQuery(function($) {
     var viewport = $("#viewport");
     var canvas = $("#canvas");
     var edited_note = null;
-    var drag;
+    var drag, select;
 
     function getPixelsPerMicron() {
         var sizetest = $('<div id="sizetest" style="position: relative; ' +
@@ -94,9 +94,9 @@ jQuery(function($) {
                      'z-index': note.z_index}
 
             noteDOM.css(style);
-            noteDOM.mousedown(onNoteMouseDown);
+            noteDOM.click(onNoteClick);
             noteDOM.dblclick(onNoteDoubleClick);
-            noteContentsDOM.mousedown(onNoteMouseDown);
+            noteContentsDOM.click(onNoteClick);
         } else {
             noteContentsDOM = $(".note-contents", noteDOM);
         }
@@ -217,6 +217,67 @@ jQuery(function($) {
         return {'start': start, 'stop': stop, 'move': move};
     })();
 
+    select = (function () {
+        var add, clear, set, subtract, addTitlebar, removeTitlebar;
+
+        addTitlebar = function (noteDOM) {
+            var top, height;
+
+            // Create controls for removing and resizing the note.
+            $('<span class="note-control note-remove glyphicon ' +
+              'glyphicon-remove-sign"></span>').prependTo(noteDOM);
+            $('<span class="note-control note-resize glyphicon ' +
+              'glyphicon-resize-full-2x"></span>').appendTo(noteDOM);
+        };
+
+        removeTitlebar = function (noteDOM) {
+            // Remove the removing and resizing controls.
+            noteDOM.children(".note-control").remove();
+        };
+
+        add = function (e) {
+            var noteDOM = $(e.currentTarget);
+
+            if (! noteDOM.is(".note")) {
+                // Clicked on the content; find the note iself.
+                noteDOM = noteDOM.parents(".note");
+            }
+
+            if (! noteDOM.hasClass("selected")) {
+                noteDOM.addClass("selected");
+                addTitlebar(noteDOM);
+            }
+        };
+
+        clear = function (e) {
+            var selection = $(".note.selected");
+            selection.removeClass("selected");
+            selection.each(function (index, noteDOM) {
+                removeTitlebar($(noteDOM));
+            });
+        };
+
+        set = function (e) {
+            clear();
+            add(e);
+        };
+
+        subtract = function (e) {
+            var noteDOM = $(e.currentTarget);
+            if (! noteDOM.is(".note")) {
+                // Clicked on the content; find the note itself.
+                noteDOM = noteDOM.parents(".note");
+            }
+
+            if (noteDOM.hasClass("selected")) {
+                noteDOM.removeClass("selected");
+                removeTitlebar(noteDOM);
+            }
+        }
+
+        return {'add': add, 'clear': clear, 'set': set, 'subtract': subtract};
+    })();
+
     function onCreateNoteSuccess(id, note) {
         notepage.children.push(note);
         drawNote(note);
@@ -270,10 +331,39 @@ jQuery(function($) {
     }
 
     
-    function onNoteMouseDown(e) {
-        if (e.button === 0 && e.target === e.currentTarget) {
-            // Left button being pressed on the note itself.
-            return drag.start(e);
+    function onNoteClick(e) {
+        if (e.button === 0) {
+            console.log("handling event: target=" + e.currentTarget);
+
+            // Primary (left) button click.
+
+            if (e.shiftKey || e.ctrlKey) {
+                // Shift or control: add the note to the selection.
+                select.add(e);
+            } else if (e.altKey || e.metaKey) {
+                // Alt or meta: subtract the note from the selection.
+                select.subtract(e);
+            } else {
+                // No modifiers; reset the selection.
+                select.set(e);
+            }
+
+            // Don't allow the event to be sent to the standard (e.g. select)
+            // handlers.
+            return false;
+        } else {
+            console.log("Not handling event; target=" + e.target +
+                        " currentTarget=" + e.currentTarget +
+                        " button=" + e.button);
+        }
+    }
+
+    function onCanvasClick(e) {
+        if (e.button === 0) {
+            // Primary (left) button click.
+
+            // Remove the selection.
+            select.clear(e);
         }
     }
 
@@ -365,6 +455,8 @@ jQuery(function($) {
     $("#createNoteAction").click(function () {
         dozer.create_note(window.notepage.node_id, onCreateNoteSuccess, null);
     });
+
+    canvas.click(onCanvasClick);
 
     // Bind motion events to allow dragging of notes.
     $(window).mousemove(onWindowMouseMove);
